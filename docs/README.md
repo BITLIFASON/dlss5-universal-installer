@@ -36,3 +36,5 @@ At any interactive prompt, enter 0 to cancel the current operation and return to
 
 
 In the menu, choose **8 — Exit** to close the utility. For any game-folder prompt, enter 1 to open the standard Windows folder picker, or enter the path manually.
+
+The interface mode can be changed from menu item 8. Simple mode shows a compact inspection summary; Advanced mode prints the complete JSON inspection report. Menu item 9 exits the utility.

@@ -14,5 +14,6 @@
   "warnBeforeElevation": "Show a warning before requesting administrator rights",
   "useLocalPackagesFirst": "Look for archives in packages first",
   "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
-  "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
+  "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest",
+  "interfaceMode": "simple"
 }

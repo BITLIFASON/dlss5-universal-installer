@@ -56,6 +56,20 @@ function Read-GamePath {
   if ($value -eq '1') { return Select-GameFolder }
   return $value
 }
+function Show-Inspection($Info) {
+  Write-Host ''; Write-Host (T 'Обнаружено:' 'Inspection:') -ForegroundColor Cyan
+  if ($Settings.interfaceMode -eq 'advanced') {
+    $Info | ConvertTo-Json -Depth 8 | Write-Host
+    return
+  }
+  Write-Host ((T "Игра: {0}" "Game: {0}") -f $Info.gamePath)
+  Write-Host ((T "Основной EXE: {0}" "Primary EXE: {0}") -f $Info.primaryExecutable)
+  Write-Host ((T "Архитектура: {0}" "Architecture: {0}") -f $Info.primaryArchitecture)
+  Write-Host ((T "API: {0}" "API: {0}") -f $Info.apiHint)
+  $dlss = if ($Info.nativeDlssDetected) { T 'найден' 'detected' } else { T 'не найден' 'not detected' }
+  Write-Host ((T "Native DLSS: {0}" "Native DLSS: {0}") -f $dlss)
+  Write-Host ((T "Файлов проверено: {0}" "Files inspected: {0}") -f $Info.fileCount)
+}
 function Write-Log([string]$Message) {
   $line = "$(Get-Date -Format o) $Message"
   Add-Content -LiteralPath (Join-Path $Dirs.Logs 'installer.log') -Value $line -Encoding UTF8
@@ -128,8 +142,7 @@ function Get-PackageInventory {
 }
 function Run-Check([string]$Path) {
   $info = Get-GameInspection $Path
-  Write-Host ''; Write-Host (T 'Обнаружено:' 'Inspection:') -ForegroundColor Cyan
-  $info | ConvertTo-Json -Depth 8 | Write-Host
+  Show-Inspection $info
   Show-MethodComparison $info
   $manifest = Save-JsonManifest 'check' $info
   Write-Log ("CHECK {0}; manifest={1}" -f $info.gamePath,$manifest)
@@ -345,6 +358,17 @@ function Set-Language {
   $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
   $script:Settings = Get-Settings
 }
+function Set-InterfaceMode {
+  Write-Host (T '1. Упрощённый интерфейс' '1. Simple interface')
+  Write-Host (T '2. Продвинутый интерфейс' '2. Advanced interface')
+  $value = Read-Input 'Выберите режим' 'Choose interface mode'
+  if ($value -eq '1') { $Settings.interfaceMode = 'simple' }
+  elseif ($value -eq '2') { $Settings.interfaceMode = 'advanced' }
+  else { throw (T 'Допустимы только 1 или 2.' 'Only 1 or 2 are accepted.') }
+  $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
+  $script:Settings = Get-Settings
+  Write-Host (T 'Режим интерфейса сохранён.' 'Interface mode saved.') -ForegroundColor Green
+}
 function Invoke-Menu {
   try {
     Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
@@ -355,7 +379,8 @@ function Invoke-Menu {
     Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
     Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
     Write-Host (T '7. Язык' '7. Language')
-    Write-Host (T '8. Выход' '8. Exit')
+    Write-Host (T '8. Режим интерфейса' '8. Interface mode')
+    Write-Host (T '9. Выход' '9. Exit')
     switch (Read-Input 'Выберите действие' 'Choose action') {
       '1' { Run-Bootstrap $GamePath $Method $null }
       '2' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Check $p }
@@ -364,7 +389,8 @@ function Invoke-Menu {
       '5' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Install $p $PackageManifest }
       '6' { Run-Restore }
       '7' { Set-Language }
-      '8' { return $false }
+      '8' { Set-InterfaceMode }
+      '9' { return $false }
       default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
     }
     return $true
@@ -386,5 +412,7 @@ function Main {
   while (Invoke-Menu) { }
 }
 try { Main } catch { Write-Error $_; exit 1 }
+
+
 
 

@@ -15,3 +15,4 @@
 - Documented custom package and alternate-version installation through local manifests.
 - Added universal 0 cancellation at interactive prompts; cancelled operations return to the main menu without installing files.
 - Added menu item 8 for a clean exit and a standard Windows folder picker for game paths.
+- Added Simple and Advanced interface modes for inspection output; menu item 9 now exits the utility.

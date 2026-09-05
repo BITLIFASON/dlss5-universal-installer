@@ -792,10 +792,10 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[strin
   }
   if (-not (Confirm-MethodCompatibility $info $SelectedMethod)) { return }
   if ($SelectedMethod -eq 'Feeder') {
-    Write-Host (T 'Провайдер motion vectors (только LumeniteFX):' 'Motion-vector provider (LumeniteFX only):') -ForegroundColor Cyan
+    Write-Host (T 'Активный motion-vector provider (оба файла LumeniteFX будут установлены):' 'Active motion-vector provider (both LumeniteFX files will be installed):') -ForegroundColor Cyan
     Write-Host (T '1. Kernel — рекомендуемый базовый вариант' '1. Kernel — recommended baseline')
     Write-Host (T '2. QuantMotion — альтернативный estimator для сравнения' '2. QuantMotion — alternative estimator for comparison')
-    $providerChoice = Read-Input 'Вариант LumeniteFX (1-2)' 'LumeniteFX variant (1-2)'
+    $providerChoice = Read-Input 'Активный режим LumeniteFX (1-2)' 'Active LumeniteFX mode (1-2)'
     if ($providerChoice -eq '2') { $Provider = 'QuantMotion' } elseif ($providerChoice -eq '1') { $Provider = 'Kernel' } else { throw (T 'Некорректный вариант LumeniteFX.' 'Invalid LumeniteFX variant.') }
   }
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }

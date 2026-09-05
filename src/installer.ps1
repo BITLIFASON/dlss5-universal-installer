@@ -380,7 +380,7 @@ function Prepare-SourcePackage($Manifest) {
       }
       $preset = Join-Path $root 'installer-generated\ReShadePreset.ini'
       New-Item -ItemType Directory -Force -Path (Split-Path $preset) | Out-Null
-      $presetText = "[GENERAL]`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`nTechniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`nTechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`n"
+      $presetText = "[GENERAL]`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`nTechniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`nTechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`n`r`n[DLSS5_Feed.fx]`r`nGEOM_ENABLE=1`r`nVALIDATE_LUMA=1`r`nVALIDATE_DEPTH=1`r`nVALIDATE_MV=1`r`nVALIDATE_STATIC=1`r`nMV_LOWRES_FILTER=0`r`n"
       [IO.File]::WriteAllText($preset, $presetText, (New-Object System.Text.UTF8Encoding($false)))
     }
     return $root

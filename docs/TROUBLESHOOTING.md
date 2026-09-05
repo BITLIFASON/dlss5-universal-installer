@@ -55,3 +55,17 @@ TextureSearchPaths=.\reshade-shaders\Textures\
 The installer repairs these paths after its ReShade step. Restart the game, open `Home`, confirm that **DLSS 5 Feed** is listed, enable `DLSS5_Feed`, and save the preset. The effect must be below the selected motion-vector provider. An empty `ReShadePreset.ini` means that no effect is enabled yet; use `Home` once to select and save it.
 
 A successful ReShade injection alone is not enough. Feeder also needs one motion-vector provider. The automatic Feeder profile installs the pinned LumeniteFX Kernel and creates a preset with `Lumenite_Kernel` above `DLSS5_Feed`. Do not treat the installation as working until both techniques are enabled and the log reports non-zero motion vectors.
+
+## Grey walls look soft or smear while the camera moves
+
+This usually means that motion vectors are empty or disagree with the depth buffer on a flat surface. Confirm that the Feeder preset has these safeguards enabled:
+
+```ini
+GEOM_ENABLE=1
+VALIDATE_LUMA=1
+VALIDATE_DEPTH=1
+VALIDATE_MV=1
+VALIDATE_STATIC=1
+```
+
+Restart the game after changing the preset and test the same wall while rotating the camera. If the log still reports mostly zero motion vectors, capture the relevant `dlss5-feed.log` lines before changing the provider or stacking another upscaler.

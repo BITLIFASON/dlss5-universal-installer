@@ -4,8 +4,11 @@ This is the global backlog for the portable installer. Completed work belongs in
 
 ## High priority
 
+- [ ] Replace raw EXE string matching with a layered PE scan: normal imports, delay-load imports, API entry-point markers, and matching engine DLLs.
+- [ ] Limit game inspection to relevant executable/DLL files, cap scan depth, and skip asset, cache, backup, redist, and tool directories.
+- [ ] Detect ReShade hooks by file version/signature and report whether add-on support is present before installing another runtime.
+- [ ] Show the active installation state during inspection: method, package version, target executable, and installed-file hash status.
 - [ ] Add a safe dry-run command that never asks for elevation and writes no game files.
-- [ ] Add explicit install-state reporting: package, version, selected executable, and whether files match the recorded hashes.
 - [ ] Add a dedicated `Restore`/uninstall summary showing every file that will be restored or removed before confirmation.
 - [ ] Add automated Windows PowerShell parser and JSON validation checks for pull requests.
 - [ ] Validate the ReShade headless command line against the pinned installer version on a disposable test game.
@@ -27,6 +30,7 @@ This is the global backlog for the portable installer. Completed work belongs in
 - [ ] Investigate DirectX 9 support only after a confirmed bridge or host process is available.
 - [ ] Add GPU and driver diagnostics as advisory checks, never as unsupported hard blocks without evidence.
 - [ ] Add conflict detection for other injectors, including multiple proxy DLLs and NVIDIA Smooth Motion.
+- [ ] Detect renderer choices exposed by separate game executables and offer the matching API as an explicit selection.
 
 ## UX backlog (GUI remains optional)
 
@@ -40,6 +44,7 @@ This is the global backlog for the portable installer. Completed work belongs in
 - [ ] Add a dependency update procedure that never replaces a pinned component without review.
 - [ ] Add repository branch protection and required validation checks to the contribution guide.
 - [ ] Review package licenses and redistribution permissions before publishing release artifacts.
+- [ ] Add a file-version and architecture report for every detected DLSS, Streamline, ReShade, and add-on binary.
 
 ## Explicit non-goals for now
 

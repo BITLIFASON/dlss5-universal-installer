@@ -44,3 +44,4 @@
 - Added FSR/XeSS runtime hints and preserved the first pristine backup across repeated installs of the same game files.
 - Added an explicit compatibility warning before experimental Native/Bridge or OptiScaler choices.
 - Added a global project TODO with implementation, compatibility, UX, and release backlogs.
+- Expanded the TODO with the PE/API scanning, bounded traversal, ReShade detection, active-state, and binary-reporting work identified during the DLSS5-Swapper review.

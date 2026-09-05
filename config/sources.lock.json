@@ -1,0 +1,33 @@
+{
+  "_comments": {
+    "sha256": "Обязателен. Команда Download откажется работать без 64-символьного SHA-256.",
+    "url": "Фиксированный HTTPS URL конкретного официального release asset.",
+    "policy": "Заполнять только официальными или авторскими upstream-релизами. Не использовать URL поиска или latest."
+  },
+  "sources": [
+    {
+      "id": "reshade-full-addons",
+      "version": "6.8.0",
+      "url": "",
+      "sha256": "",
+      "license": "BSD-3-Clause",
+      "sourceType": "official"
+    },
+    {
+      "id": "optiscaler",
+      "version": "",
+      "url": "",
+      "sha256": "",
+      "license": "see upstream release",
+      "sourceType": "official-upstream"
+    },
+    {
+      "id": "dlss5-bridge",
+      "version": "",
+      "url": "",
+      "sha256": "",
+      "license": "see upstream repository",
+      "sourceType": "author-upstream"
+    }
+  ]
+}

@@ -1,8 +1,9 @@
 ﻿[CmdletBinding()]
 param(
-  [ValidateSet('Menu','Check','Packages','Install','Restore')][string]$Action = 'Menu',
+  [ValidateSet('Menu','Check','Packages','Download','Install','Restore')][string]$Action = 'Menu',
   [string]$GamePath,
-  [string]$PackageManifest
+  [string]$PackageManifest,
+  [string]$SourceId
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +12,7 @@ $Dirs = @{
   Logs = Join-Path $Root 'logs'
   Backups = Join-Path $Root 'backups'
   Packages = Join-Path $Root 'packages'
+  Downloads = Join-Path $Root 'downloads'
   Manifests = Join-Path $Root 'manifests'
   Staging = Join-Path $Root 'staging'
 }
@@ -120,6 +122,29 @@ function Run-Packages {
   $manifest = Save-JsonManifest 'packages' $inventory
   Write-Log ("PACKAGES; manifest={0}" -f $manifest)
 }
+function Get-SourceLock {
+  $path = Join-Path $Root 'config\sources.lock.json'
+  if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw (T 'Файл sources.lock.json не найден.' 'sources.lock.json was not found.') }
+  Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+}
+function Run-Download([string]$Id) {
+  if (-not $Settings.allowAutomaticDownloads) { throw (T 'Автоскачивание отключено в config/settings.json. Сначала явно включите allowAutomaticDownloads.' 'Automatic downloads are disabled in config/settings.json. Explicitly enable allowAutomaticDownloads first.') }
+  $lock = Get-SourceLock
+  $source = @($lock.sources | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
+  if ($null -eq $source) { throw ("Unknown locked source: {0}" -f $Id) }
+  if ([string]::IsNullOrWhiteSpace([string]$source.url) -or [string]$source.url -notmatch '^https://') { throw (T 'Для источника нужен HTTPS URL.' 'A HTTPS URL is required for the source.') }
+  if ([string]$source.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw (T 'Для источника не задан ожидаемый SHA-256.' 'Expected SHA-256 is not set for this source.') }
+  $name = [IO.Path]::GetFileName(([Uri]$source.url).AbsolutePath)
+  if ([string]::IsNullOrWhiteSpace($name) -or $name -eq '/') { $name = "$($source.id)-$($source.version).download" }
+  $download = Join-Path $Dirs.Downloads $name
+  Write-Host (T ("Скачивание {0} {1}..." -f $source.id,$source.version) ("Downloading {0} {1}..." -f $source.id,$source.version))
+  Invoke-WebRequest -Uri $source.url -OutFile $download -UseBasicParsing
+  $actual = Get-Sha256 $download
+  if ($actual -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $download -Force; throw (T 'SHA-256 скачанного файла не совпал; файл удалён.' 'Downloaded SHA-256 did not match; file was removed.') }
+  Copy-Item -LiteralPath $download -Destination (Join-Path $Dirs.Packages $name) -Force
+  Write-Log ("DOWNLOAD {0} {1}; sha256={2}" -f $source.id,$source.version,$actual)
+  Write-Host (T 'Проверенный архив помещён в packages.' 'Verified archive copied to packages.') -ForegroundColor Green
+}
 function Test-SafeRelativePath([string]$Path) {
   if ([string]::IsNullOrWhiteSpace($Path) -or [IO.Path]::IsPathRooted($Path) -or $Path.Replace('/','\') -match '(^|\\)\.\.([\\]|$)') { return $false }
   return $true
@@ -217,20 +242,23 @@ function Set-Language {
 function Main {
   if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
+  if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Host (T 'ID источника из sources.lock.json' 'Source ID from sources.lock.json') }; Run-Download $SourceId; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
   Write-Host (T '1. Проверить игру' '1. Check game')
   Write-Host (T '2. Проверить packages и SHA-256' '2. Inventory packages and SHA-256')
-  Write-Host (T '3. Установка проверенного пакета' '3. Install a verified package')
-  Write-Host (T '4. Восстановление последней установки' '4. Restore latest installation')
-  Write-Host (T '5. Язык' '5. Language')
+  Write-Host (T '3. Скачать зафиксированный пакет' '3. Download a locked package')
+  Write-Host (T '4. Установка проверенного пакета' '4. Install a verified package')
+  Write-Host (T '5. Восстановление последней установки' '5. Restore latest installation')
+  Write-Host (T '6. Язык' '6. Language')
   switch (Read-Host (T 'Выберите действие' 'Choose action')) {
     '1' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $p }
     '2' { Run-Packages }
-    '3' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
-    '4' { Run-Restore }
-    '5' { Set-Language }
+    '3' { $s = if ($SourceId) { $SourceId } else { Read-Host (T 'ID источника' 'Source ID') }; Run-Download $s }
+    '4' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
+    '5' { Run-Restore }
+    '6' { Set-Language }
     default { Write-Host (T 'Отмена.' 'Cancelled.') }
   }
 }

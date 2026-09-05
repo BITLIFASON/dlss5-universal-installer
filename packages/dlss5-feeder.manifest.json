@@ -125,6 +125,45 @@
       "path": "reshade-shaders\\Textures\\SweetFX\\SearchTex.png",
       "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/SweetFX/SearchTex.png",
       "sha256": "55a97853ab64174245701accf315ab63d41776c9cb2aa14c675e653684fd96f3"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\lumenite_Kernel.fx",
+      "sourcePath": "lumenitefx\\Shaders\\lumenite_Kernel.fx",
+      "sha256": "463d2bada33fd3058383bc0273aba74df9d5f1db75fe13d8f305a22bf94526e3"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\include\\lumenite_ColorManagement.fxh",
+      "sourcePath": "lumenitefx\\Shaders\\include\\lumenite_ColorManagement.fxh",
+      "sha256": "116d3c41cd48f7787a2ed87eefc65fb2d9083fc1ab609766a3fbcca3e62649a6"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\include\\lumenite_Compute.fxh",
+      "sourcePath": "lumenitefx\\Shaders\\include\\lumenite_Compute.fxh",
+      "sha256": "736e3f39fc0c48a405c4d10b0d158502009db940e2673ff778e6b919d3c1a55f"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\include\\lumenite_Helpers.fxh",
+      "sourcePath": "lumenitefx\\Shaders\\include\\lumenite_Helpers.fxh",
+      "sha256": "8826d613944be27e14095982b20098fff6d45e91c7d4028473c2f5b784c80028"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\include\\lumenite_Projections.fxh",
+      "sourcePath": "lumenitefx\\Shaders\\include\\lumenite_Projections.fxh",
+      "sha256": "709ec414649b74e573ca0f12a5ef25998d332238f7cab14a3d91053c8d388cab"
+    },
+    {
+      "path": "reshade-shaders\\Textures\\lumenite_bluenoise256.png",
+      "sourcePath": "lumenitefx\\Textures\\lumenite_bluenoise256.png",
+      "sha256": "2ad9e5b0bd28ddff569dbd756a551fe8e681b67eb72a83bb027434e1be24122b"
+    },
+    {
+      "path": "ReShadePreset.ini",
+      "sourcePath": "installer-generated\\ReShadePreset.ini",
+      "sha256": "eecf5d43d09cf664737a397000c5408b5cdacb684009287211acf29050b8fb70"
     }
+  ],
+  "sourcePackages": [
+    "dlss5-aio",
+    "lumenitefx"
   ]
 }

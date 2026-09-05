@@ -8,6 +8,7 @@ This index lists the components used by the installer and the exact upstream rel
 | DLSS5 Bridge | `dlss5-bridge.addon64` | 1.4.12 | [NIGos/dlss5-bridge release](https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12) |
 | OptiScaler | `dxgi.dll`, `OptiScaler.ini`, proxy/runtime DLLs declared in the manifest | 0.9.4 | [OptiScaler release](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.4) |
 | DLSS5 Feeder | `dlss5-feed.addon64`, `DLSS5_Feed.fx`, `renodx-dlss5.addon64`, `nvngx_dlssnr.dll`, `nvngx_dlss.dll`, and the declared ReShade shader assets | 1.2.5 | [ShugokiFable/dlss5-aio release](https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5) |
+| Feeder motion provider | `lumenite_Kernel.fx`, required includes, blue-noise texture | `mainline@76fa3e4d` | [umar-afzaal/LumeniteFX](https://github.com/umar-afzaal/LumeniteFX/tree/76fa3e4d601c97e9bc63f119c01405b7b9938885) |
 | 7-Zip command-line extractor | `7zr.exe` used to prepare multipart AIO archives | 26.03 | [7-Zip upstream release](https://github.com/ip7z/7zip/releases/tag/26.03) |
 
 ## Package manifests

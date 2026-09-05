@@ -333,6 +333,23 @@ function Prepare-SourcePackage($Manifest) {
       & $seven x (Join-Path $Dirs.Downloads 'DLSS5-AIO-v1.2.5.7z.001') "-o$out" -y | Out-Null
       if ($LASTEXITCODE -ne 0) { throw 'DLSS5-AIO extraction failed.' }
     }
+    if ($Manifest.sourcePackages -contains 'lumenitefx') {
+      $lumeniteArchive = Ensure-LockedDownload 'lumenitefx-mainline-76fa3e4d'
+      $lumeniteOut = Join-Path $out 'lumenitefx-source'
+      if (-not (Test-Path -LiteralPath $lumeniteOut -PathType Container)) { Expand-Package $lumeniteArchive $lumeniteOut }
+      $lumeniteRoot = Get-ChildItem -LiteralPath $lumeniteOut -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($null -eq $lumeniteRoot) { throw 'LumeniteFX archive has no root directory.' }
+      foreach ($relative in @('Shaders\lumenite_Kernel.fx','Shaders\include\lumenite_ColorManagement.fxh','Shaders\include\lumenite_Compute.fxh','Shaders\include\lumenite_Helpers.fxh','Shaders\include\lumenite_Projections.fxh','Textures\lumenite_bluenoise256.png')) {
+        $source = Join-Path $lumeniteRoot $relative
+        $destination = Join-Path $root ('lumenitefx\' + $relative)
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("LumeniteFX archive is missing: {0}" -f $relative) }
+        New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+      }
+      $preset = Join-Path $root 'installer-generated\ReShadePreset.ini'
+      New-Item -ItemType Directory -Force -Path (Split-Path $preset) | Out-Null
+      @('[GENERAL]','PreprocessorDefinitions=DLSS5_MV_PROVIDER=3','Techniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx','TechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx') | Set-Content -LiteralPath $preset -Encoding UTF8
+    }
     return $root
   }
   return $null
@@ -367,7 +384,7 @@ function Get-PackageManifest([string]$Path) {
     if ($null -eq $manifest.$required) { throw ("Package manifest is missing: {0}" -f $required) }
   }
   if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'В манифесте указан неизвестный метод.' 'Unknown method in package manifest.') }
-  if (-not $manifest.sourcePackage) {
+  if (-not $manifest.sourcePackage -and -not $manifest.sourcePackages) {
     if ($null -eq $manifest.archive -or $null -eq $manifest.sha256) { throw (T 'В манифесте отсутствуют archive или sha256.' 'Manifest is missing archive or sha256.') }
     $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
     if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в папке пакетов.' 'Package archive is missing from packages.') }
@@ -474,13 +491,17 @@ function Get-ReShadeState([string]$InstallRoot) {
   }
   return [ordered]@{ installed=$false; path=$null; addonSupport=$false }
 }
-function Repair-ReShadeSearchPaths([string]$InstallRoot) {
+function Repair-ReShadeSearchPaths([string]$InstallRoot,[bool]$Feeder = $false) {
   $ini = Join-Path $InstallRoot 'ReShade.ini'
   if (-not (Test-Path -LiteralPath $ini -PathType Leaf)) { return $false }
   $text = [IO.File]::ReadAllText($ini)
   $updated = $text
   $updated = $updated -replace '(?m)^EffectSearchPaths=.*$', 'EffectSearchPaths=.\reshade-shaders\Shaders\'
   $updated = $updated -replace '(?m)^TextureSearchPaths=.*$', 'TextureSearchPaths=.\reshade-shaders\Textures\'
+  if ($Feeder -and $updated -notmatch '(?m)^PreprocessorDefinitions=.*DLSS5_MV_PROVIDER=3') {
+    if ($updated -match '(?m)^PreprocessorDefinitions=(.*)$') { $updated = $updated -replace '(?m)^PreprocessorDefinitions=(.*)$', 'PreprocessorDefinitions=$1,DLSS5_MV_PROVIDER=3' }
+    else { $updated += "`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`n" }
+  }
   if ($updated -eq $text) { return $false }
   [IO.File]::WriteAllText($ini, $updated, (New-Object System.Text.UTF8Encoding($false)))
   Write-Log ("RESHADE_PATHS_REPAIRED {0}" -f $ini)
@@ -524,7 +545,7 @@ function Remove-DetectedReShade([string]$InstallRoot,$State) {
   Write-Log ("UNTRACKED_CLEANUP {0}; manifest={1}" -f $InstallRoot,$manifestPath)
   Write-Host (T 'Компоненты удалены. Точечная копия сохранена; Restore вернёт ручную установку, но не оригинальные файлы игры.' 'Components removed. A point snapshot was saved; Restore will bring back the manual installation, not the original game files.') -ForegroundColor Yellow
 }
-function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot) {
+function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot,[bool]$Feeder = $false) {
   $state = Get-ReShadeState $InstallRoot
   $forceReinstall = $false
   if ($state.installed) {
@@ -572,7 +593,7 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
   if ($state.installed) { $arguments += @('--state','update') }
   $arguments += $Executable
   $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
-  Repair-ReShadeSearchPaths $InstallRoot | Out-Null
+  Repair-ReShadeSearchPaths $InstallRoot $Feeder | Out-Null
   $after = Get-FileSnapshot $InstallRoot
   $records = @()
   foreach ($relative in $after.Keys) {
@@ -640,7 +661,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
   $sourceRoot = $stage
-  if ($manifest.sourcePackage) { $sourceRoot = Prepare-SourcePackage $manifest }
+  if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest }
   else { Expand-Package $manifest._archivePath $stage }
   $backupRoot = if ($PreBackupRoot) { $PreBackupRoot } else { Join-Path $Dirs.Backups $stamp }
   $records = @($PreRecords)
@@ -713,7 +734,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     $reshade = Ensure-LockedDownload 'reshade-full-addons'
     if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
     Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
-    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot
+    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot ($SelectedMethod -eq 'Feeder')
   }
   Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true
 }

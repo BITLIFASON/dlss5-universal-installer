@@ -82,6 +82,14 @@
       "sha256": "ad4c82fadcbdf93c03b4fc440f300509c7d60c5c2f4d183e35d9d70d6957037d",
       "license": "Public domain",
       "sourceType": "official-upstream"
+    },
+    {
+      "id": "lumenitefx-mainline-76fa3e4d",
+      "version": "mainline@76fa3e4d601c97e9bc63f119c01405b7b9938885",
+      "downloadUrl": "https://github.com/umar-afzaal/LumeniteFX/archive/76fa3e4d601c97e9bc63f119c01405b7b9938885.zip",
+      "sha256": "bf574543a6af6527587af0bad139922e8c0363bb154cdfb3e41133c7dca2ee3f",
+      "license": "see upstream LICENSE.md and NOTICE",
+      "sourceType": "author-upstream"
     }
   ]
 }

@@ -494,7 +494,25 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
     Write-Host (T '3. Отменить' '3. Cancel')
     $choice = Read-Input 'Выберите действие' 'Choose an action'
     if ($choice -eq '2') {
-      Write-Host (T 'Предупреждение: pristine backup отсутствует. Если игровые DLL были заменены вручную, их оригиналы этой операцией восстановить нельзя. Удаление может сломать ReShade, preset или игру.' 'Warning: no pristine backup exists. If game DLLs were replaced manually, this operation cannot restore their originals. Removal may break ReShade, the preset, or the game.') -ForegroundColor Red
+      $ownership = Read-Input 'Эту установку делала текущая утилита? (y/n)' 'Was this installation made by this utility? (y/n)'
+      if ($ownership -match '^(y|yes|д|да)$') {
+        $tracked = @(Get-InstalledPackageManifest | Where-Object {
+          try {
+            $entry = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+            $gamePath = if ($entry.gamePath) { [string]$entry.gamePath } else { '' }
+            $root = [string]$InstallRoot
+            $gamePath -and ($root.Equals($gamePath,[StringComparison]::OrdinalIgnoreCase) -or $root.StartsWith($gamePath.TrimEnd('\') + '\',[StringComparison]::OrdinalIgnoreCase))
+          } catch { $false }
+        })
+        if ($tracked.Count -gt 0) {
+          Write-Host (T 'Найдена отслеживаемая установка. Используйте пункт Restore для штатного отката; удаление не выполняется.' 'A tracked installation was found. Use Restore for the normal rollback; no files will be removed here.') -ForegroundColor Yellow
+          throw [System.OperationCanceledException]::new('Tracked installation found; returning to the main menu.')
+        }
+        Write-Host (T 'Manifest установки не найден. Backup-папки могут быть неполными, поэтому восстановить все оригинальные игровые DLL нельзя гарантировать.' 'The installation manifest was not found. Backup folders may be incomplete, so restoring every original game DLL cannot be guaranteed.') -ForegroundColor Red
+      } else {
+        Write-Host (T 'Установка считается ручной. Pristine backup отсутствует; заменённые игровые DLL этой операцией восстановить нельзя.' 'The installation is treated as manual. No pristine backup exists; this operation cannot restore replaced game DLLs.') -ForegroundColor Red
+      }
+      Write-Host (T 'Удаление может сломать ReShade, preset или игру.' 'Removal may break ReShade, the preset, or the game.') -ForegroundColor Red
       if ((Read-Input 'Удалить обнаруженные компоненты? (y/n)' 'Remove the detected components? (y/n)') -match '^(y|yes|д|да)$') {
         Remove-DetectedReShade $InstallRoot $state
         throw [System.OperationCanceledException]::new('Untracked components were removed by user; returning to the main menu.')

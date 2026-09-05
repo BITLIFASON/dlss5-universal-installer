@@ -48,3 +48,4 @@
 - Added an explicit existing-ReShade choice: reinstall, remove the detected hook/configuration and return to the menu, or cancel.
 - Extended unmanaged cleanup to remove known DLSS5 add-on files without touching shader folders, unknown DLLs, or `nvngx_dlss.dll`.
 - Unmanaged cleanup now creates a point snapshot that can restore the removed manual components; it explicitly warns that overwritten game DLL originals cannot be recovered.
+- Unmanaged cleanup now asks whether the installation belongs to this utility and redirects to Restore when a matching manifest exists.

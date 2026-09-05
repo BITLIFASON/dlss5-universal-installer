@@ -17,3 +17,4 @@
 - Added menu item 8 for a clean exit and a standard Windows folder picker for game paths.
 - Added Simple and Advanced interface modes for inspection output; menu item 9 now exits the utility.
 - Added executable candidate scoring and filters for common Unreal/Unity technical binaries; installation now asks which remaining EXE to target.
+- Moved language, interface mode, automatic downloads, and elevation warnings into a dedicated Settings submenu; the main menu now has a clean Exit item.

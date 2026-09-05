@@ -40,3 +40,5 @@ In the menu, choose **8 — Exit** to close the utility. For any game-folder pro
 The interface mode can be changed from menu item 8. Simple mode shows a compact inspection summary; Advanced mode prints the complete JSON inspection report. Menu item 9 exits the utility.
 
 Before installation, the tool scores executable candidates and filters common Unreal/Unity technical processes such as editor, crash reporter, shader compiler, subprocess, and server binaries. It still asks you to choose the target EXE when multiple candidates remain.
+
+The main menu keeps user preferences under **Settings**. This submenu contains language, interface mode, automatic-download policy, and the elevation warning toggle. The main menu has a separate **Exit** item.

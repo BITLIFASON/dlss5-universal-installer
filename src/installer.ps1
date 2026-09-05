@@ -402,6 +402,43 @@ function Set-InterfaceMode {
   $script:Settings = Get-Settings
   Write-Host (T 'Режим интерфейса сохранён.' 'Interface mode saved.') -ForegroundColor Green
 }
+function Set-BooleanSetting([string]$Property,[string]$ru,[string]$en) {
+  $current = [bool]$Settings.$Property
+  $state = if ($current) { T 'включено' 'enabled' } else { T 'выключено' 'disabled' }
+  Write-Host ((T "Текущее состояние: {0}" "Current state: {0}") -f $state)
+  $value = Read-Input "$ru (y/n)" "$en (y/n)"
+  if ($value -match '^(y|yes|д|да)$') { $Settings.$Property = $true }
+  elseif ($value -match '^(n|no|н|нет)$') { $Settings.$Property = $false }
+  else { throw (T 'Введите y или n.' 'Enter y or n.') }
+  $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
+  $script:Settings = Get-Settings
+  Write-Host (T 'Настройка сохранена.' 'Setting saved.') -ForegroundColor Green
+}
+function Invoke-SettingsMenu {
+  while ($true) {
+    try {
+      Write-Host ''; Write-Host (T 'Настройки' 'Settings') -ForegroundColor Cyan
+      Write-Host (T '1. Язык' '1. Language')
+      Write-Host (T '2. Режим интерфейса' '2. Interface mode')
+      Write-Host (T '3. Автоматические загрузки' '3. Automatic downloads')
+      Write-Host (T '4. Предупреждение перед правами администратора' '4. Elevation warning')
+      Write-Host (T '5. Назад' '5. Back')
+      switch (Read-Input 'Выберите настройку' 'Choose a setting') {
+        '1' { Set-Language }
+        '2' { Set-InterfaceMode }
+        '3' { Set-BooleanSetting 'allowAutomaticDownloads' 'Автоматические загрузки' 'Automatic downloads' }
+        '4' { Set-BooleanSetting 'warnBeforeElevation' 'Предупреждение перед правами администратора' 'Elevation warning' }
+        '5' { return }
+        default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
+      }
+    } catch [System.OperationCanceledException] {
+      Write-Host (T 'Настройки закрыты. Возврат в главное меню.' 'Settings closed. Returning to the main menu.') -ForegroundColor Yellow
+      return
+    } catch {
+      Write-Error $_
+    }
+  }
+}
 function Invoke-Menu {
   try {
     Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
@@ -411,9 +448,8 @@ function Invoke-Menu {
     Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
     Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
     Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
-    Write-Host (T '7. Язык' '7. Language')
-    Write-Host (T '8. Режим интерфейса' '8. Interface mode')
-    Write-Host (T '9. Выход' '9. Exit')
+    Write-Host (T '7. Настройки' '7. Settings')
+    Write-Host (T '8. Выход' '8. Exit')
     switch (Read-Input 'Выберите действие' 'Choose action') {
       '1' { Run-Bootstrap $GamePath $Method $null }
       '2' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Check $p }
@@ -421,9 +457,8 @@ function Invoke-Menu {
       '4' { $s = if ($SourceId) { $SourceId } else { Read-Input 'ID источника' 'Source ID' }; Run-Download $s }
       '5' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Install $p $PackageManifest }
       '6' { Run-Restore }
-      '7' { Set-Language }
-      '8' { Set-InterfaceMode }
-      '9' { return $false }
+      '7' { Invoke-SettingsMenu }
+      '8' { return $false }
       default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
     }
     return $true

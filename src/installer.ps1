@@ -371,14 +371,12 @@ function Prepare-SourcePackage($Manifest) {
       $lumeniteArchive = Ensure-LockedDownload 'lumenitefx-mainline-76fa3e4d'
       $lumeniteOut = Join-Path $out 'lumenitefx-source'
       if (-not (Test-Path -LiteralPath $lumeniteOut -PathType Container)) { Expand-Package $lumeniteArchive $lumeniteOut }
-      $lumeniteRoot = Get-ChildItem -LiteralPath $lumeniteOut -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-      if ($null -eq $lumeniteRoot) { throw 'LumeniteFX archive has no root directory.' }
       foreach ($relative in @('Shaders\lumenite_Kernel.fx','Shaders\include\lumenite_ColorManagement.fxh','Shaders\include\lumenite_Compute.fxh','Shaders\include\lumenite_Helpers.fxh','Shaders\include\lumenite_Projections.fxh','Textures\lumenite_bluenoise256.png')) {
-        $source = Join-Path $lumeniteRoot $relative
+        $source = Get-ChildItem -LiteralPath $lumeniteOut -File -Recurse -Filter ([IO.Path]::GetFileName($relative)) -ErrorAction SilentlyContinue | Select-Object -First 1
         $destination = Join-Path $root ('lumenitefx\' + $relative)
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("LumeniteFX archive is missing: {0}" -f $relative) }
+        if ($null -eq $source) { throw ("LumeniteFX archive is missing: {0}" -f $relative) }
         New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
-        Copy-Item -LiteralPath $source -Destination $destination -Force
+        Copy-Item -LiteralPath $source.FullName -Destination $destination -Force
       }
       $preset = Join-Path $root 'installer-generated\ReShadePreset.ini'
       New-Item -ItemType Directory -Force -Path (Split-Path $preset) | Out-Null

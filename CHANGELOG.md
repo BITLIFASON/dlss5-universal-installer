@@ -28,3 +28,4 @@
 - Fixed README section formatting for the component index link.
 - Added a README documentation index linking to the component, method, manifest, safety, testing, and plan documents in docs/.
 - Completed the README documentation index with descriptions for every Markdown file in docs/.
+- Removed the documentation index from the root README at the repository-level presentation request; docs/ files remain available.

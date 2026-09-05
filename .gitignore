@@ -5,6 +5,7 @@ backups/*
 !backups/.gitkeep
 packages/*
 !packages/README.txt
+!packages/*.manifest.json
 downloads/*
 !downloads/.gitkeep
 staging/*

@@ -53,3 +53,4 @@
 - Repaired ReShade shader and texture search paths after installation; documented the DLSS5_Feed activation order and game settings needed for repeatable verification.
 - Made the Feeder profile self-contained: it now downloads pinned LumeniteFX files, sets `DLSS5_MV_PROVIDER=3`, creates the correct `Lumenite_Kernel` → `DLSS5_Feed` preset order, and records the provider files for restore.
 - Enabled geometry and luma validation in the generated Feeder preset to reduce ghosting and softness on static surfaces when motion-vector probes are unstable.
+- Switched the default Feeder profile to conservative per-pixel validation and raised the static-surface contrast threshold after the experimental geometry fit remained soft on moving camera views.

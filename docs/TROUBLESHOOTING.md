@@ -61,11 +61,12 @@ A successful ReShade injection alone is not enough. Feeder also needs one motion
 This usually means that motion vectors are empty or disagree with the depth buffer on a flat surface. Confirm that the Feeder preset has these safeguards enabled:
 
 ```ini
-GEOM_ENABLE=1
+GEOM_ENABLE=0
 VALIDATE_LUMA=1
 VALIDATE_DEPTH=1
 VALIDATE_MV=1
 VALIDATE_STATIC=1
+STATIC_MIN_CONTRAST=0.02
 ```
 
-Restart the game after changing the preset and test the same wall while rotating the camera. If the log still reports mostly zero motion vectors, capture the relevant `dlss5-feed.log` lines before changing the provider or stacking another upscaler.
+The default profile keeps the experimental geometry fit disabled because it can introduce its own noise. Restart the game after changing the preset and test the same wall while rotating the camera. If the log still reports mostly zero motion vectors, capture the relevant `dlss5-feed.log` lines before changing the provider or stacking another upscaler.

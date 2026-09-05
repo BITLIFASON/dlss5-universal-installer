@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [ValidateSet('Menu','Check','Packages','Download','Bootstrap','Install','Restore')][string]$Action = 'Menu',
   [string]$GamePath,

@@ -31,6 +31,8 @@ The automatic Bootstrap flow uses only the pinned versions in `config/sources.lo
 
 Shared settings are in `config/settings.json`: language, supported APIs, mandatory method comparison, elevation warning, local package preference, and the rule against deleting unknown files.
 
+Additional public guides:\n\n- [Compatibility matrix](COMPATIBILITY.md) — supported APIs, methods, and current boundaries;\n- [Troubleshooting](TROUBLESHOOTING.md) — recovery steps and diagnostic collection.
+
 At any interactive prompt, enter 0 to cancel the current operation and return to the main menu. The command-line actions remain non-interactive when all required parameters are supplied.
 
 
@@ -45,3 +47,4 @@ The main menu keeps user preferences under **Settings**. This submenu contains l
 
 
 Personal preferences are stored in the ignored `config/settings.local.json` file. The tracked `config/settings.json` remains the English default template, so changing options from the Settings menu does not create a Git diff. Delete the local file to return to repository defaults.
+

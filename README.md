@@ -11,6 +11,8 @@ Choose a game, inspect its real executable, select an integration method, downlo
 
 > This project is an installer and verification layer. It does not promise compatibility with every game, renderer, or DLSS5 component.
 
+> **Experimental personal-use project.** This tool is provided as-is for experimentation and personal use. It may contain bugs, cause incompatibilities, or fail to install, run, or restore a game correctly. Review the planned changes and keep your own backups before using it. You accept responsibility for any results of running the installer; the authors provide no warranty or liability for data loss, game damage, performance issues, or other problems.
+
 ## 📖 Contents
 
 - [🚀 Quick start](#-quick-start)

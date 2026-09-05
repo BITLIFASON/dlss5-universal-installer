@@ -1,106 +1,159 @@
-# DLSS5 Universal Installer
+# ⚡ DLSS5 Universal Installer
 
-A portable Windows utility for installing and switching community DLSS5 integration methods in supported games.
+### A portable, verification-first installer for community DLSS5 integrations on Windows games
 
-It is designed for a simple workflow: choose a game, inspect the executable candidates, select a method, download pinned upstream releases, verify SHA-256 hashes, install only the declared files, and keep a point backup for restore.
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D6)](https://learn.microsoft.com/windows/)
+[![APIs](https://img.shields.io/badge/APIs-DX11%20%7C%20DX12-5C2D91)](#compatibility)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)](https://learn.microsoft.com/powershell/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> This project is an installer and verification layer. It does not claim that every game, renderer, or DLSS5 method is compatible.
+Choose a game, inspect its real executable, select an integration method, download pinned upstream assets, verify SHA-256, install only declared files, and restore the selected installation when needed.
 
-## What it supports
+> This project is an installer and verification layer. It does not promise compatibility with every game, renderer, or DLSS5 component.
 
-- Windows 10/11 x64;
-- DirectX 11 and DirectX 12 targets;
-- games with native DLSS through **Native/Bridge**;
-- games that need an upscaler interception layer through **OptiScaler**;
-- games without native DLSS through **ReShade + Feeder**;
-- automatic downloads from pinned HTTPS release assets;
-- SHA-256 verification for downloaded archives and staged files;
+## 📖 Contents
+
+- [✨ Features](#-features)
+- [🔬 How it works](#-how-it-works)
+- [🎮 Installation methods](#-installation-methods)
+- [📊 Compatibility](#-compatibility)
+- [🚀 Quick start](#-quick-start)
+- [🧰 Custom packages and versions](#-custom-packages-and-versions)
+- [↩️ Restore](#️-restore)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [💻 Requirements](#-requirements)
+- [📚 Documentation](#-documentation)
+- [🔐 Safety and scope](#-safety-and-scope)
+- [📁 Repository layout](#-repository-layout)
+- [📄 License](#-license)
+
+## ✨ Features
+
+- One-click Bootstrap flow for pinned upstream releases;
+- Native/Bridge, OptiScaler, and ReShade + Feeder methods;
+- executable candidate scoring with Unreal/Unity technical-process filtering;
+- Windows Explorer folder picker and manual path input;
+- SHA-256 verification for downloads and staged files;
 - point backups and manifest-based restore;
+- Simple and Advanced inspection views;
 - English and Russian interactive UI;
-- Simple and Advanced inspection output.
+- `0` cancellation at every interactive prompt;
+- custom local packages and alternate versions through manifests;
+- no full game backups and no automatic deletion of unknown files.
 
-The first release targets 64-bit games. 32-bit support depends on a method providing a compatible x86 or host component and is not assumed automatically.
+## 🔬 How it works
 
-## Quick start
+```mermaid
+flowchart LR
+    A[Select game folder] --> B[Inspect EXE candidates]
+    B --> C[Choose the real game EXE]
+    C --> D[Compare methods]
+    D --> E[Download pinned sources]
+    E --> F[Verify SHA-256]
+    F --> G[Create point backup]
+    G --> H[Install declared files]
+    H --> I[Launch and verify]
+    I --> J[Restore selected install if needed]
+```
+
+The inspection step is read-only. It reports executable architecture, API hints, native DLSS files, and common proxy DLLs. A detected candidate is a hint, not proof that injection will work.
+
+## 🎮 Installation methods
+
+| Method | Best fit | Trade-off |
+|---|---|---|
+| **Native/Bridge** | Games that already ship with native DLSS | Usually the lowest overhead; requires a compatible native path |
+| **OptiScaler** | Games whose upscaler path can be redirected | Broad compatibility; proxy DLL conflicts are possible |
+| **ReShade + Feeder** | Games without native DLSS when depth/motion data is available | Broadest route; usually costs more FPS and may need per-game tuning |
+
+The installer treats these methods as alternatives. Restore the selected installation before switching methods.
+
+## 📊 Compatibility
+
+| Target | Native/Bridge | OptiScaler | ReShade + Feeder | Status |
+|---|---:|---:|---:|---|
+| DirectX 11 x64 | Candidate | Candidate | Candidate | Verify per game |
+| DirectX 12 x64 | Candidate | Candidate | Candidate | Verify per game |
+| DirectX 11/12 x86 | Not assumed | Not assumed | Host-dependent | Experimental |
+| Vulkan / OpenGL | Not implemented | Not implemented | Not implemented | Out of scope |
+| Online anti-cheat games | Not a target | Not a target | Not a target | Check game rules |
+
+See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits.
+
+## 🚀 Quick start
 
 1. Download or clone the repository.
 2. Run `DLSS5-Universal.cmd`.
 3. Select **Automatic installation**.
-4. Enter the game path or type `1` to open the Windows folder picker.
-5. Review the executable candidates and select the real game executable.
-6. Choose Native/Bridge, OptiScaler, or ReShade + Feeder.
+4. Enter the game path, or type `1` to open the Windows folder picker.
+5. Review the executable candidates and choose the real game executable.
+6. Select Native/Bridge, OptiScaler, or ReShade + Feeder.
 7. Review the package and confirm installation.
-8. Launch the game and verify image quality, stability, and performance.
+8. Launch the game and compare the same scene before and after installation.
 
-The default repository profile is English with the Simple interface. Personal preferences are stored in the ignored `config/settings.local.json` file.
+The tracked defaults are English, Simple interface, locked automatic downloads enabled, elevation warnings enabled, and unknown-file deletion disabled. Personal changes are saved to ignored `config/settings.local.json`.
 
-At any interactive prompt, enter `0` to cancel the current operation and return to the main menu. Choose **Exit** to close the utility.
+Enter `0` at any interactive prompt to cancel the current operation and return to the main menu. Choose **Settings** to change language, interface mode, download policy, or elevation warnings. Choose **Exit** to close the utility.
 
-## Installation methods
+## 🧰 Custom packages and versions
 
-| Method | Use when | Trade-off |
-|---|---|---|
-| Native/Bridge | The game already contains native DLSS | Usually the lowest overhead; requires a working native DLSS path |
-| OptiScaler | Native/Bridge is unavailable or unsuitable | Broad compatibility; proxy DLL conflicts are possible |
-| ReShade + Feeder | The game has no native DLSS path | Most universal route; depends on depth/motion vectors and usually costs more FPS |
+To install a different version or an unlisted package:
 
-The installer does not treat these methods as compatible at the same time. Restore the selected installation before switching methods.
+1. Place the archive in `packages/`.
+2. Create a manifest with its exact source, archive SHA-256, and SHA-256 for every destination file.
+3. Choose **Install a custom local package**, or run `-Action Install` with that manifest.
 
-## Automatic installation
+The tool does not download arbitrary URLs automatically and does not delete files absent from the manifest.
 
-The Bootstrap flow uses the locked entries in `config/sources.lock.json`. It can download the required release assets, verify their SHA-256 values, prepare multipart DLSS5-AIO archives, install ReShade when required, and install the selected package manifest.
+## ↩️ Restore
 
-Automatic downloads are enabled by default for these pinned sources. The installer rejects non-HTTPS sources and entries without a 64-character SHA-256. A hash confirms file identity; it does not prove that third-party code is safe.
+Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. Only files recorded by that installation are restored or removed; a full game copy is never created.
 
-## Documentation
+## 🛠️ Troubleshooting
+
+- Wrong executable: run `Check`, then select the real game EXE during installation.
+- Game fails to launch: use **Restore a selected installation** before trying another method.
+- Image is unchanged: verify the selected method, ReShade add-on installation, and the target executable.
+- Download or install stops: run **Inventory packages and SHA-256** and compare against the lockfile and package manifest.
+- Need more detail: switch to **Advanced** interface mode and keep the generated JSON inspection manifest with the installer log.
+
+See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
+
+## 💻 Requirements
+
+- Windows 10 or Windows 11 x64;
+- PowerShell 5.1 or newer;
+- DirectX 11 or DirectX 12 game target;
+- writable game directory, or permission to approve elevation;
+- internet access for locked automatic downloads;
+- 64-bit games are the primary target; x86 support is method-dependent and not assumed.
+
+## 📚 Documentation
 
 | Document | Purpose |
 |---|---|
-| [Portable tool guide](docs/README.md) | Usage, actions, profiles, and settings |
-| [Components and sources](docs/COMPONENTS.md) | Pinned components and official upstream releases |
+| [Portable tool guide](docs/README.md) | Actions, profiles, settings, and operating flow |
+| [Components and sources](docs/COMPONENTS.md) | Pinned versions, official upstream links, and file groups |
 | [Compatibility matrix](docs/COMPATIBILITY.md) | Supported APIs, methods, and current boundaries |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Recovery steps and diagnostic collection |
 | [Package manifest](docs/PACKAGE-MANIFEST.md) | Format for custom packages and alternate versions |
 | [Safety](docs/SAFETY.md) | Download, backup, elevation, and anti-cheat boundaries |
 | [Testing](docs/TESTING.md) | Generic validation procedure; personal tests stay local |
 | [Implementation plan](docs/PLAN.md) | Current project scope and completed work |
-## Custom packages and versions
 
-To install a different version or a package that is not part of Bootstrap:
+## 🔐 Safety and scope
 
-1. Place the archive in `packages/`.
-2. Create a package manifest with the exact source, archive SHA-256, and SHA-256 for every destination file.
-3. Choose **Install a custom local package**, or run `-Action Install` with that manifest.
+- Sources must use HTTPS and a pinned SHA-256;
+- point backups are created before replacing existing files;
+- unknown existing DLLs are not removed automatically;
+- administrator elevation shows a warning first;
+- ReShade is the only third-party installer launched automatically, and only from the pinned Bootstrap source;
+- online games with anti-cheat are outside the intended scope;
+- a matching hash confirms file identity, not software safety.
 
-The tool does not download arbitrary URLs automatically and does not delete files that are absent from a package manifest.
+The project does not commit downloaded binaries or proprietary NVIDIA files. Review upstream licenses and release notes before use.
 
-## Restore
-
-Choose **Restore a selected installation** to see the recorded game paths, package versions, and installation manifests. Select the entry to revert. Only files recorded by that installation are restored or removed; the utility never creates a full game backup.
-
-## Command-line actions
-
-```powershell
-src\installer.ps1 -Action Check -GamePath "C:\Games\MyGame"
-src\installer.ps1 -Action Packages
-src\installer.ps1 -Action Download -SourceId "optiscaler"
-src\installer.ps1 -Action Bootstrap
-src\installer.ps1 -Action Install -GamePath "C:\Games\MyGame" -PackageManifest "packages\method.manifest.json"
-src\installer.ps1 -Action Restore
-```
-
-`Check` is read-only. It reports executable candidates, architecture, API hints, native DLSS files, and possible proxy files. `Advanced` mode prints the complete JSON inspection report.
-
-## Safety and scope
-
-- Point backups are created before replacing existing files.
-- Unknown existing DLLs are not removed automatically.
-- Administrator elevation shows a warning first.
-- Online games with anti-cheat are outside the intended scope.
-- ReShade is the only third-party installer launched automatically, and only from the pinned source used by Bootstrap.
-- Packages and sources should come from the project author or official upstream releases.
-
-## Repository layout
+## 📁 Repository layout
 
 - `src/` — PowerShell implementation;
 - `DLSS5-Universal.cmd` — Windows launcher;
@@ -114,12 +167,10 @@ src\installer.ps1 -Action Restore
 - `local-tests/` — personal game test plans and results, ignored by Git;
 - `docs/` — public operating and safety documentation.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [docs/README.md](docs/README.md), and [LICENSE](LICENSE).
+## 🤝 Contributing
 
+Use a feature branch and pull request. Keep personal settings, downloaded binaries, game paths, test results, and generated manifests out of commits. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
+## 📄 License
 
-
-
-
-
-
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

@@ -26,3 +26,4 @@
 - Reworked the public README around the actual workflow, supported methods, safety model, custom packages, restore flow, and repository layout.
 - Added a component and source index with official upstream links, pinned versions, package manifests, and SHA-256 lockfile references.
 - Fixed README section formatting for the component index link.
+- Added a README documentation index linking to the component, method, manifest, safety, testing, and plan documents in docs/.

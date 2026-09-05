@@ -56,6 +56,16 @@ Automatic downloads are enabled by default for these pinned sources. The install
 
 See [Components and sources](docs/COMPONENTS.md) for the pinned versions, official upstream links, installed file groups, package manifests, and SHA-256 lockfile.
 
+## Documentation
+
+| Document | Purpose |
+|---|---|
+| [Components and sources](docs/COMPONENTS.md) | Pinned components, official upstream links, versions, and file groups |
+| [Methods](docs/METHODS.md) | When to use Native/Bridge, OptiScaler, or ReShade + Feeder |
+| [Package manifest](docs/PACKAGE-MANIFEST.md) | Manifest format for custom packages and alternate versions |
+| [Safety](docs/SAFETY.md) | Download, backup, elevation, and anti-cheat boundaries |
+| [Testing](docs/TESTING.md) | Generic validation procedure; personal test plans stay in `local-tests/` |
+| [Implementation plan](docs/PLAN.md) | Current project scope and completed work |
 ## Custom packages and versions
 
 To install a different version or a package that is not part of Bootstrap:
@@ -107,5 +117,6 @@ src\installer.ps1 -Action Restore
 - `docs/` — public operating and safety documentation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [docs/README.md](docs/README.md), and [LICENSE](LICENSE).
+
 
 

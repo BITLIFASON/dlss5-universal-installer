@@ -546,11 +546,13 @@ function Repair-ReShadeSearchPaths([string]$InstallRoot,[bool]$Feeder = $false) 
     else { $updated += "`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`n" }
   }
   if ($Feeder) {
-    $presetPath = Join-Path $InstallRoot 'ReShadePreset.ini'
+    $presetPath = (Join-Path $InstallRoot 'ReShadePreset.ini').Replace('\','/')
     if ($updated -match '(?m)^PresetPath=.*$') { $updated = $updated -replace '(?m)^PresetPath=.*$', "PresetPath=$presetPath" }
     else { $updated += "`r`nPresetPath=$presetPath`r`n" }
     if ($updated -match '(?m)^StartupPresetPath=.*$') { $updated = $updated -replace '(?m)^StartupPresetPath=.*$', "StartupPresetPath=$presetPath" }
     else { $updated += "`r`nStartupPresetPath=$presetPath`r`n" }
+    if ($updated -match '(?m)^AutoSavePreset=.*$') { $updated = $updated -replace '(?m)^AutoSavePreset=.*$', 'AutoSavePreset=0' }
+    else { $updated += "`r`nAutoSavePreset=0`r`n" }
   }
   if ($updated -eq $text) { return $false }
   [IO.File]::WriteAllText($ini, $updated, (New-Object System.Text.UTF8Encoding($false)))

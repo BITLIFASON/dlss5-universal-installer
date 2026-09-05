@@ -23,3 +23,4 @@
 - Updated the fallback configuration and documentation to match the enabled locked-download default.
 - Added ignored `config/settings.local.json` overrides so personal language and interface preferences are not pushed to the repository.
 - Improved Russian UI wording and replaced leftover English menu terms with consistent Russian translations.
+- Reworked the public README around the actual workflow, supported methods, safety model, custom packages, restore flow, and repository layout.

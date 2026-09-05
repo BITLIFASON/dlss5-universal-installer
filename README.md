@@ -45,17 +45,14 @@ Enter `0` at any interactive prompt to cancel the current operation and return t
 
 ## 🎮 In-game verification
 
-After installation, use the same save, location, resolution, graphics preset, and camera position for each comparison:
+After installation, compare the same save, scene, settings, and camera position:
 
-1. Launch the game through its normal launcher if it requires one.
-2. Load a repeatable save and wait 30–60 seconds after loading for shaders and streaming to settle.
-3. Capture a baseline in the same scene. Record native FPS, frame-time stability, and any visual artifacts.
-4. Check the image at rest and while rotating the camera: fine foliage, fences, neon signs, reflections, particles, hair, and UI should remain stable.
-5. If the method provides an in-game toggle, switch it once and compare the same view. For ReShade, `Home` usually opens the overlay, but the key can differ by preset.
-6. If frame generation is enabled, record both the displayed FPS and the native/pre-generation FPS. Judge smoothness from frame time and input latency, not the generated number alone.
-7. Play for 10–15 minutes and test a busy area, driving, menus, and a save/load transition before considering the installation stable.
+1. Launch the game normally and load the test save.
+2. Wait about 30 seconds, then check the same view with the camera still and moving.
+3. Record native FPS, displayed FPS with frame generation, and whether you see ghosting, flicker, broken UI, or stutter.
+4. Play briefly in a busy area. If the image or stability is worse, restore the installation.
 
-Do not stack methods. If the game crashes, the image is corrupted, or input latency becomes unacceptable, exit the game and use **Restore a selected installation** before trying another method. See the [full verification checklist](docs/IN-GAME-VERIFICATION.md).
+`Home` is the usual ReShade overlay key. Other hotkeys are preset-dependent and are not guaranteed by this installer. Do not stack methods. See the [full verification checklist](docs/IN-GAME-VERIFICATION.md).
 
 ## ↩️ Restore
 

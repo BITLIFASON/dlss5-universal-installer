@@ -1,6 +1,6 @@
 # In-game verification checklist
 
-Use this checklist after every installation. It is intended for a reproducible comparison, not a synthetic benchmark.
+Use this short checklist after every installation.
 
 ## Before launching
 
@@ -11,10 +11,9 @@ Use this checklist after every installation. It is intended for a reproducible c
 
 ## First launch
 
-1. Load the test save and wait 30–60 seconds for shaders and asset streaming to settle.
-2. Check that the game reaches the world without a crash or a black screen.
-3. Move the camera slowly, then quickly. Inspect foliage, fences, hair, neon signs, reflections, particles, and UI edges.
-4. Check a busy scene, driving or fast traversal, a menu transition, and a save/load transition.
+1. Load the test save and wait about 30 seconds.
+2. Check the same view with the camera still and moving.
+3. Test a busy scene and a menu or save/load transition.
 
 ## Performance comparison
 
@@ -29,7 +28,7 @@ Generated FPS is not a replacement for native performance. A high displayed numb
 
 ## ReShade and toggles
 
-If ReShade is installed, `Home` commonly opens its overlay, but the preset may use another key. Toggle the active preset once and compare the same camera view. Do not enable several competing presets or injection methods at the same time.
+`Home` is the usual key for the ReShade overlay. Other keys depend on the preset or add-on. Do not enable several competing presets or injection methods at the same time.
 
 ## Accept or roll back
 

@@ -5,7 +5,8 @@ param(
   [string]$PackageManifest,
   [string]$SourceId,
   [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method,
-  [string]$ExecutablePath
+  [string]$ExecutablePath,
+  [string]$Api
 )
 
 $ErrorActionPreference = 'Stop'
@@ -404,6 +405,20 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath,[string]$Se
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
   return $false
 }
+function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,[string]$Api) {
+  $probe = Join-Path $InstallGamePath ('.dlss5-bootstrap-write-test-' + [guid]::NewGuid().ToString('N'))
+  try { New-Item -ItemType File -Path $probe -Force | Out-Null; Remove-Item -LiteralPath $probe -Force; return $true } catch { }
+  $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return $true }
+  if ($Settings.warnBeforeElevation) {
+    $answer = Read-Input 'Автоматическая установка может потребовать права администратора. Перезапустить мастер с повышенными правами? (y/n)' 'Automatic installation may require administrator rights. Relaunch the wizard elevated? (y/n)'
+    if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
+  }
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Bootstrap -GamePath `"$InstallGamePath`" -Method $SelectedMethod"
+  if ($Api) { $args += " -Api `"$Api`"" }
+  Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
+  return $false
+}
 function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false) {
   if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
@@ -475,6 +490,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }
   $exe = Select-Executable $info
   if ((Read-Input ("Установить метод {0} в выбранный EXE? (y/n)" -f $SelectedMethod) ("Install method {0} into the selected EXE? (y/n)" -f $SelectedMethod)) -notmatch '^(y|yes|д|да)$') { return }
+  if (-not (Ensure-AdminBootstrap $Path $SelectedMethod $Api)) { return }
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $backupRoot = Join-Path $Dirs.Backups $stamp
   $preRecords = @()
@@ -626,7 +642,7 @@ function Main {
   if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-GamePath }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
   if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Input 'ID источника из sources.lock.json' 'Source ID from sources.lock.json' }; Run-Download $SourceId; return }
-  if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $null; return }
+  if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $Api; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest $ExecutablePath; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   while (Invoke-Menu) { }

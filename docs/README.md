@@ -52,4 +52,5 @@ Runtime downloads, staging files, backups, generated manifests, logs, and person
 - [Package manifest](PACKAGE-MANIFEST.md) — manifest format for custom packages;
 - [Safety](SAFETY.md) — download, backup, elevation, and anti-cheat boundaries;
 - [Testing](TESTING.md) — generic validation procedure;
-- [Implementation plan](PLAN.md) — current project scope and completed work.
+- [Implementation plan](PLAN.md) — current project scope and completed work;
+- [Project TODO](TODO.md) — global backlog and explicit non-goals.

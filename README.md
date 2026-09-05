@@ -154,6 +154,7 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 | [Safety](docs/SAFETY.md) | Download, backup, elevation, and anti-cheat boundaries |
 | [Testing](docs/TESTING.md) | Generic validation procedure; personal tests stay local |
 | [Implementation plan](docs/PLAN.md) | Current project scope and completed work |
+| [Project TODO](docs/TODO.md) | Global backlog, compatibility work, and release tasks |
 
 ## 🔐 Safety and scope
 

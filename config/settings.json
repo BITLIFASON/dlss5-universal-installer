@@ -13,7 +13,7 @@
   "compareBeforeInstall": "Show a method comparison before installation",
   "warnBeforeElevation": true,
   "useLocalPackagesFirst": "Look for archives in packages first",
-  "allowAutomaticDownloads": false,
+  "allowAutomaticDownloads": true,
   "deleteUnknownFiles": false,
   "interfaceMode": "simple"
 }

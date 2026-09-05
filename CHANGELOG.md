@@ -19,3 +19,4 @@
 - Added executable candidate scoring and filters for common Unreal/Unity technical binaries; installation now asks which remaining EXE to target.
 - Moved language, interface mode, automatic downloads, and elevation warnings into a dedicated Settings submenu; the main menu now has a clean Exit item.
 - Changed defaults for a typical English user: English language, simple interface, disabled automatic downloads, enabled elevation warning, and no deletion of unknown files.
+- Enabled automatic downloads by default for locked, SHA-256-pinned sources.

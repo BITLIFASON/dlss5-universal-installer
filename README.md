@@ -123,7 +123,7 @@ flowchart LR
     I --> J[Restore selected install if needed]
 ```
 
-Inspection is read-only. It reports executable architecture, API hints, native DLSS files, process state, and common proxy DLLs. A detected candidate is a hint, not proof that injection will work.
+Inspection is read-only. It reports executable architecture, API hints, native DLSS files, FSR/XeSS runtime hints, process state, and common proxy DLLs. A detected candidate is a hint, not proof that injection will work.
 
 ## 🛠️ Troubleshooting
 

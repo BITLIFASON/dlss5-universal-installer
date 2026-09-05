@@ -27,4 +27,4 @@ Use this for games without a native DLSS path when ReShade can obtain the requir
 
 ## How compatibility is determined
 
-The installer inspects executable architecture, candidate executable paths, native DLSS filenames, and common proxy DLL filenames. These are hints for choosing a method, not proof that injection will work. The final decision requires a launch test, image-quality check, and performance measurement in the target game.
+The installer inspects executable architecture, candidate executable paths, native DLSS filenames, common FSR/XeSS runtime filenames, and common proxy DLL filenames. These are hints for choosing a method, not proof that injection will work. The final decision requires a launch test, image-quality check, and performance measurement in the target game.

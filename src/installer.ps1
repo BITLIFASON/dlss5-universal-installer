@@ -78,6 +78,7 @@ function Show-Inspection($Info) {
   Write-Host ((T "API: {0}" "API: {0}") -f $Info.apiHint)
   $dlss = if ($Info.nativeDlssDetected) { T 'найден' 'detected' } else { T 'не найден' 'not detected' }
   Write-Host ((T "Native DLSS: {0}" "Native DLSS: {0}") -f $dlss)
+  Write-Host ((T "FSR/XeSS путей: {0}" "FSR/XeSS paths: {0}") -f @($Info.upscalerFiles).Count)
   Write-Host ((T "Файлов проверено: {0}" "Files inspected: {0}") -f $Info.fileCount)
   Write-Host ((T "Процесс игры: {0}" "Game process: {0}") -f (if ($Info.processRunning) { T 'запущен' 'running' } else { T 'не запущен' 'not running' }))
   Write-Host ((T "Proxy DLL найдено: {0}" "Proxy DLLs found: {0}") -f @($Info.proxyFiles).Count)
@@ -153,6 +154,7 @@ function Get-GameInspection([string]$Path) {
   $files = @(Get-ChildItem -LiteralPath $resolved -File -Recurse -ErrorAction SilentlyContinue)
   $executables = @(Find-GameExecutables $resolved)
   $dlss = @($files | Where-Object { $_.Name -match '^(nvngx_dlss|nvngx_dlssg|nvngx_dlssnr|dlss).*\.dll' })
+  $upscaler = @($files | Where-Object { $_.Name -match '(?i)^(ffx_fsr|amd_fidelityfx|libxess|xess|OptiScaler).*\.(dll|ini)$' })
   $proxy = @($files | Where-Object { $_.Name -match '^(dxgi|d3d11|d3d12|ReShade.*)\.dll' })
   $apiHint = Get-ApiHint $executables[0].FullName
   if ($apiHint -eq 'Unknown (confirm in game documentation)') {
@@ -168,6 +170,7 @@ function Get-GameInspection([string]$Path) {
     processRunning = Test-GameProcess $executables[0].FullName
     nativeDlssDetected = ($dlss.Count -gt 0)
     dlssFiles = @($dlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
+    upscalerFiles = @($upscaler | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     proxyFiles = @($proxy | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     fileCount = $files.Count
   }
@@ -188,7 +191,7 @@ function Select-Executable($Info) {
 function Show-MethodComparison($Info) {
   Write-Host ''; Write-Host (T 'Сравнение методов:' 'Method comparison:') -ForegroundColor Cyan
   if ($Info.nativeDlssDetected) { Write-Host (T '1. Native/Bridge — обнаружен штатный DLSS; обычно минимальная нагрузка.' '1. Native/Bridge — native DLSS detected; usually lowest overhead.') } else { Write-Host (T '1. Native/Bridge — штатный DLSS не найден, сначала проверить вручную.' '1. Native/Bridge — native DLSS not detected; verify manually first.') -ForegroundColor DarkGray }
-  Write-Host (T '2. OptiScaler — широкая совместимость; возможны конфликты DLL-прокси.' '2. OptiScaler — broad compatibility; proxy DLL conflicts are possible.')
+  if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler — найдены пути FSR/XeSS ({0}); возможны конфликты DLL-прокси.' '2. OptiScaler — FSR/XeSS paths detected ({0}); proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler — широкая совместимость; FSR/XeSS в файлах не обнаружены.' '2. OptiScaler — broad compatibility; no FSR/XeSS files detected.') }
   Write-Host (T '3. ReShade + Feeder — постобработка; требует буфер глубины и векторы движения, обычно снижает FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
 }
 function Save-JsonManifest([string]$Prefix,$Object) {
@@ -392,6 +395,19 @@ function Expand-Package([string]$Archive,[string]$Destination) {
 function Get-InstalledPackageManifest {
   @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
 }
+function Get-PreviousInstallRecord([string]$GamePath,[string]$InstallRoot,[string]$RelativePath) {
+  foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
+    try { $install = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json } catch { continue }
+    $recordRoot = if ($install.installRoot) { [string]$install.installRoot } else { [string]$install.gamePath }
+    if ([string]$install.gamePath -ne $GamePath -or $recordRoot -ne $InstallRoot) { continue }
+    foreach ($record in @($install.files)) {
+      if ([string]$record.path -eq $RelativePath -and $record.installedSha256) {
+        if (-not $record.existed -or (Test-Path -LiteralPath $record.backup -PathType Leaf)) { return $record }
+      }
+    }
+  }
+  return $null
+}
 function Restore-Records($Records) {
   foreach ($entry in @($Records | Sort-Object path -Descending)) {
     $destination = Join-Path ([string]$entry.installRoot) ([string]$entry.path)
@@ -502,10 +518,15 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
     if ($recordByPath.ContainsKey($relative)) {
       $record = $recordByPath[$relative]
     } elseif (Test-Path -LiteralPath $destination -PathType Leaf) {
-      $backup = Join-Path $backupRoot $relative
-      New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
-      $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$true; originalSha256=Get-Sha256 $destination; backup=$backup; installedSha256=$null }
-      Copy-Item -LiteralPath $destination -Destination $backup -Force
+      $previous = Get-PreviousInstallRecord $game $installRoot $relative
+      if ($previous) {
+        $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=[bool]$previous.existed; originalSha256=$previous.originalSha256; backup=$previous.backup; installedSha256=$null }
+      } else {
+        $backup = Join-Path $backupRoot $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
+        $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$true; originalSha256=Get-Sha256 $destination; backup=$backup; installedSha256=$null }
+        Copy-Item -LiteralPath $destination -Destination $backup -Force
+      }
     } else { $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$false; originalSha256=$null; backup=$null; installedSha256=$null } }
     if (-not $recordByPath.ContainsKey($relative)) {
       $records += $record

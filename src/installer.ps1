@@ -380,7 +380,8 @@ function Prepare-SourcePackage($Manifest) {
       }
       $preset = Join-Path $root 'installer-generated\ReShadePreset.ini'
       New-Item -ItemType Directory -Force -Path (Split-Path $preset) | Out-Null
-      @('[GENERAL]','PreprocessorDefinitions=DLSS5_MV_PROVIDER=3','Techniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx','TechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx') | Set-Content -LiteralPath $preset -Encoding UTF8
+      $presetText = "[GENERAL]`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`nTechniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`nTechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`n"
+      [IO.File]::WriteAllText($preset, $presetText, (New-Object System.Text.UTF8Encoding($false)))
     }
     return $root
   }
@@ -706,7 +707,8 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest }
   else { Expand-Package $manifest._archivePath $stage }
   $backupRoot = if ($PreBackupRoot) { $PreBackupRoot } else { Join-Path $Dirs.Backups $stamp }
-  $records = @($PreRecords)
+  $records = New-Object 'System.Collections.Generic.List[object]'
+  foreach ($pre in @($PreRecords)) { if ($null -ne $pre) { $records.Add($pre) } }
   $recordByPath = @{}
   foreach ($pre in $records) { if ($pre.path) { $recordByPath[[string]$pre.path] = $pre } }
   try {
@@ -731,7 +733,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
       }
     } else { $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$false; originalSha256=$null; backup=$null; installedSha256=$null } }
     if (-not $recordByPath.ContainsKey($relative)) {
-      $records += $record
+      $records.Add($record)
       $recordByPath[$relative] = $record
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null

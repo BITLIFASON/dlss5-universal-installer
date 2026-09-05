@@ -70,8 +70,8 @@ function Get-GameInspection([string]$Path) {
   $resolved = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $files = @(Get-ChildItem -LiteralPath $resolved -File -Recurse -ErrorAction SilentlyContinue)
   $executables = @(Find-GameExecutables $resolved)
-  $dlss = @($files | Where-Object { $_.Name -match '^(nvngx_dlss|nvngx_dlssg|nvngx_dlssnr|dlss).*\\.dll' })
-  $proxy = @($files | Where-Object { $_.Name -match '^(dxgi|d3d11|d3d12|ReShade.*)\\.dll' })
+  $dlss = @($files | Where-Object { $_.Name -match '^(nvngx_dlss|nvngx_dlssg|nvngx_dlssnr|dlss).*\.dll' })
+  $proxy = @($files | Where-Object { $_.Name -match '^(dxgi|d3d11|d3d12|ReShade.*)\.dll' })
   $apiHint = if ($files.Name -contains 'd3d12.dll') { 'DX12 candidate' } elseif ($files.Name -contains 'd3d11.dll') { 'DX11 candidate' } else { 'Unknown (confirm in game documentation)' }
   [ordered]@{
     timestamp = (Get-Date).ToUniversalTime().ToString('o')

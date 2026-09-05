@@ -18,3 +18,7 @@ manifests/*
 Thumbs.db
 
 config/settings.local.json
+
+# Personal test plans, game paths, and results
+local-tests/*
+!local-tests/.gitkeep

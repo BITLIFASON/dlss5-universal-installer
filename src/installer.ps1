@@ -274,8 +274,20 @@ function Run-CleanManifests {
   } else { Write-Host (T 'Манифесты с подтверждением сохранены.' 'Confirmation-required manifests were kept.') -ForegroundColor Yellow }
 }
 function Get-SourceLock {
-  $path = Join-Path $Root 'config\sources.lock.json'
-  if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw (T 'Файл sources.lock.json не найден.' 'sources.lock.json was not found.') }
+  $candidates = @(
+    (Join-Path $Root 'config\sources.lock.json'),
+    (Join-Path (Get-Location) 'config\sources.lock.json')
+  )
+  $cursor = Split-Path -Parent $ScriptPath
+  for ($i = 0; $i -lt 4 -and $cursor; $i++) {
+    $candidates += Join-Path $cursor 'config\sources.lock.json'
+    $parent = Split-Path -Parent $cursor
+    if ($parent -eq $cursor) { break }
+    $cursor = $parent
+  }
+  $path = @($candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1)
+  if (-not $path) { throw (T ("Файл sources.lock.json не найден. Root: {0}; Script: {1}" -f $Root,$ScriptPath) ("sources.lock.json was not found. Root: {0}; script: {1}" -f $Root,$ScriptPath)) }
+  Write-Log ("SOURCE_LOCK {0}" -f $path)
   Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 }
 function Get-SourceDownloadUrl($Source) {

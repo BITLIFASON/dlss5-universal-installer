@@ -42,3 +42,4 @@
 - Added a streamed download progress bar with temporary-file cleanup on interrupted downloads.
 - Reordered the root README around the user workflow and added an in-game verification checklist.
 - Added FSR/XeSS runtime hints and preserved the first pristine backup across repeated installs of the same game files.
+- Added an explicit compatibility warning before experimental Native/Bridge or OptiScaler choices.

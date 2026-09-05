@@ -194,6 +194,19 @@ function Show-MethodComparison($Info) {
   if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler — найдены пути FSR/XeSS ({0}); возможны конфликты DLL-прокси.' '2. OptiScaler — FSR/XeSS paths detected ({0}); proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler — широкая совместимость; FSR/XeSS в файлах не обнаружены.' '2. OptiScaler — broad compatibility; no FSR/XeSS files detected.') }
   Write-Host (T '3. ReShade + Feeder — постобработка; требует буфер глубины и векторы движения, обычно снижает FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
 }
+function Confirm-MethodCompatibility($Info,[string]$SelectedMethod) {
+  $warning = $false
+  if ($SelectedMethod -eq 'NativeBridge' -and -not $Info.nativeDlssDetected) {
+    Write-Host (T 'Предупреждение: native DLSS не найден. Этот метод может не дать результата.' 'Warning: native DLSS was not detected. This method may not work.') -ForegroundColor Yellow
+    $warning = $true
+  }
+  if ($SelectedMethod -eq 'OptiScaler' -and @($Info.upscalerFiles).Count -eq 0) {
+    Write-Host (T 'Предупреждение: FSR/XeSS не найдены. OptiScaler может быть несовместим с этой игрой.' 'Warning: no FSR/XeSS files were detected. OptiScaler may be incompatible with this game.') -ForegroundColor Yellow
+    $warning = $true
+  }
+  if ($warning -and (Read-Input 'Продолжить с этим методом? (y/n)' 'Continue with this method? (y/n)') -notmatch '^(y|yes|д|да)$') { return $false }
+  return $true
+}
 function Save-JsonManifest([string]$Prefix,$Object) {
   $name = '{0}-{1}.json' -f $Prefix,(Get-Date -Format 'yyyyMMdd-HHmmss')
   $path = Join-Path $Dirs.Manifests $name
@@ -554,6 +567,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     Show-MethodComparison $info
     $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Input 'Метод (1-3)' 'Method (1-3)') - 1]
   }
+  if (-not (Confirm-MethodCompatibility $info $SelectedMethod)) { return }
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }

@@ -4,7 +4,8 @@ param(
   [string]$GamePath,
   [string]$PackageManifest,
   [string]$SourceId,
-  [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method
+  [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method,
+  [string]$ExecutablePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -101,6 +102,18 @@ function Get-PeArchitecture([string]$Path) {
     return ('0x{0:X4}' -f $machine)
   } catch { return 'Unknown' }
 }
+function Get-ApiHint([string]$ExecutablePath) {
+  try {
+    $bytes = [IO.File]::ReadAllBytes($ExecutablePath)
+    $text = [Text.Encoding]::ASCII.GetString($bytes)
+    $has12 = $text -match '(?i)d3d12\.dll'
+    $has11 = $text -match '(?i)d3d11\.dll'
+    if ($has12 -and $has11) { return 'DX11/DX12 candidate (PE imports)' }
+    if ($has12) { return 'DX12 candidate (PE imports)' }
+    if ($has11) { return 'DX11 candidate (PE imports)' }
+  } catch { }
+  return 'Unknown (confirm in game documentation)'
+}
 function Get-ExecutableScore($Exe,[string]$Root) {
   $score = 0
   $name = $Exe.BaseName.ToLowerInvariant()
@@ -134,7 +147,10 @@ function Get-GameInspection([string]$Path) {
   $executables = @(Find-GameExecutables $resolved)
   $dlss = @($files | Where-Object { $_.Name -match '^(nvngx_dlss|nvngx_dlssg|nvngx_dlssnr|dlss).*\.dll' })
   $proxy = @($files | Where-Object { $_.Name -match '^(dxgi|d3d11|d3d12|ReShade.*)\.dll' })
-  $apiHint = if ($files.Name -contains 'd3d12.dll') { 'DX12 candidate' } elseif ($files.Name -contains 'd3d11.dll') { 'DX11 candidate' } else { 'Unknown (confirm in game documentation)' }
+  $apiHint = Get-ApiHint $executables[0].FullName
+  if ($apiHint -eq 'Unknown (confirm in game documentation)') {
+    $apiHint = if ($files.Name -contains 'd3d12.dll') { 'DX12 candidate' } elseif ($files.Name -contains 'd3d11.dll') { 'DX11 candidate' } else { $apiHint }
+  }
   [ordered]@{
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
     gamePath = $resolved
@@ -203,6 +219,8 @@ function Ensure-LockedDownload([string]$Id) {
   $lock = Get-SourceLock
   $source = @($lock.sources | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
   if ($null -eq $source) { throw ("Unknown locked source: {0}" -f $Id) }
+  if ([string]$source.url -notmatch '^https://') { throw ("Locked source is not HTTPS: {0}" -f $Id) }
+  if ([string]$source.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw ("Locked source has no valid SHA-256: {0}" -f $Id) }
   $name = [IO.Path]::GetFileName(([Uri]$source.url).AbsolutePath)
   $path = Join-Path $Dirs.Downloads $name
   if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -288,7 +306,55 @@ function Expand-Package([string]$Archive,[string]$Destination) {
 function Get-InstalledPackageManifest {
   @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
 }
-function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
+function Restore-Records($Records) {
+  foreach ($entry in @($Records | Sort-Object path -Descending)) {
+    $destination = Join-Path ([string]$entry.installRoot) ([string]$entry.path)
+    try {
+      if ($entry.existed -and $entry.backup -and (Test-Path -LiteralPath $entry.backup -PathType Leaf)) {
+        New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+        Copy-Item -LiteralPath $entry.backup -Destination $destination -Force
+      } elseif (-not $entry.existed -and (Test-Path -LiteralPath $destination -PathType Leaf)) {
+        Remove-Item -LiteralPath $destination -Force
+      }
+    } catch { Write-Warning ("Rollback failed for {0}: {1}" -f $destination,$_.Exception.Message) }
+  }
+}
+function Get-FileSnapshot([string]$Root) {
+  $snapshot = @{}
+  if (Test-Path -LiteralPath $Root -PathType Container) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $Root -File -Recurse -ErrorAction SilentlyContinue)) {
+      $relative = Get-RelativePath $Root $file.FullName
+      $snapshot[$relative] = [ordered]@{ path=$relative; fullPath=$file.FullName; sha256=Get-Sha256 $file.FullName }
+    }
+  }
+  return $snapshot
+}
+function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot) {
+  $before = Get-FileSnapshot $InstallRoot
+  $process = Start-Process -FilePath $Installer -ArgumentList @('--headless','--api',$Api,$Executable) -Wait -PassThru
+  $after = Get-FileSnapshot $InstallRoot
+  $records = @()
+  foreach ($relative in $after.Keys) {
+    $current = $after[$relative]
+    $previous = if ($before.ContainsKey($relative)) { $before[$relative] } else { $null }
+    if ($null -eq $previous -or $previous.sha256 -ne $current.sha256) {
+      if ($previous) {
+        $backup = Join-Path $BackupRoot $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
+        Copy-Item -LiteralPath $previous.fullPath -Destination $backup -Force
+        $records += [ordered]@{ installRoot=$InstallRoot; path=$relative; existed=$true; originalSha256=$previous.sha256; backup=$backup; installedSha256=$current.sha256 }
+      } else {
+        $records += [ordered]@{ installRoot=$InstallRoot; path=$relative; existed=$false; originalSha256=$null; backup=$null; installedSha256=$current.sha256 }
+      }
+    }
+  }
+  if ($process.ExitCode -ne 0) {
+    Restore-Records $records
+    throw ("ReShade setup failed with exit code {0}" -f $process.ExitCode)
+  }
+  return @($records)
+}
+function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath,[string]$SelectedExecutable) {
   $probe = Join-Path $InstallGamePath ('.dlss5-write-test-' + [guid]::NewGuid().ToString('N'))
   try { New-Item -ItemType File -Path $probe -Force | Out-Null; Remove-Item -LiteralPath $probe -Force; return $true } catch { }
   $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -297,11 +363,11 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
     $answer = Read-Input 'Установка может потребовать права администратора. Перезапустить с повышенными правами? (y/n)' 'Installation may require administrator rights. Relaunch elevated? (y/n)'
     if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
   }
-  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`""
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`" -ExecutablePath `"$SelectedExecutable`""
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
   return $false
 }
-function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath) {
+function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false) {
   if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $info = Get-GameInspection $game
@@ -311,31 +377,45 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $installRoot = $game
   if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $ExecutablePath }
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
-  if ((Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
-  if (-not (Ensure-Admin $installRoot $ManifestPath)) { return }
-  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  if (-not $AlreadyConfirmed -and (Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
+  if (-not (Ensure-Admin $installRoot $ManifestPath $ExecutablePath)) { return }
+  $stamp = if ($PreStamp) { $PreStamp } else { Get-Date -Format 'yyyyMMdd-HHmmss' }
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
   $sourceRoot = $stage
   if ($manifest.sourcePackage) { $sourceRoot = Prepare-SourcePackage $manifest }
   else { Expand-Package $manifest._archivePath $stage }
-  $backupRoot = Join-Path $Dirs.Backups $stamp
-  $records = @()
-  foreach ($entry in @($manifest.files)) {
+  $backupRoot = if ($PreBackupRoot) { $PreBackupRoot } else { Join-Path $Dirs.Backups $stamp }
+  $records = @($PreRecords)
+  $recordByPath = @{}
+  foreach ($pre in $records) { if ($pre.path) { $recordByPath[[string]$pre.path] = $pre } }
+  try {
+   foreach ($entry in @($manifest.files)) {
     $relative = ([string]$entry.path).Replace('/','\')
     $sourceRelative = if ($entry.sourcePath) { ([string]$entry.sourcePath).Replace('/','\') } else { $relative }
     $source = Join-Path $sourceRoot $sourceRelative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
     if ((Get-Sha256 $source) -ne ([string]$entry.sha256).ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
     $destination = Join-Path $installRoot $relative
-    if (Test-Path -LiteralPath $destination -PathType Leaf) {
+    if ($recordByPath.ContainsKey($relative)) {
+      $record = $recordByPath[$relative]
+    } elseif (Test-Path -LiteralPath $destination -PathType Leaf) {
       $backup = Join-Path $backupRoot $relative
       New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
+      $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$true; originalSha256=Get-Sha256 $destination; backup=$backup; installedSha256=$null }
       Copy-Item -LiteralPath $destination -Destination $backup -Force
-      $records += [ordered]@{ path=$relative; existed=$true; originalSha256=Get-Sha256 $destination; backup=$backup }
-    } else { $records += [ordered]@{ path=$relative; existed=$false; originalSha256=$null; backup=$null } }
+    } else { $record = [ordered]@{ installRoot=$installRoot; path=$relative; existed=$false; originalSha256=$null; backup=$null; installedSha256=$null } }
+    if (-not $recordByPath.ContainsKey($relative)) {
+      $records += $record
+      $recordByPath[$relative] = $record
+    }
     New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
+    $record.installedSha256 = Get-Sha256 $destination
+   }
+  } catch {
+    Restore-Records $records
+    throw
   }
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
@@ -353,6 +433,10 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }
   $exe = Select-Executable $info
+  if ((Read-Input ("Установить метод {0} в выбранный EXE? (y/n)" -f $SelectedMethod) ("Install method {0} into the selected EXE? (y/n)" -f $SelectedMethod)) -notmatch '^(y|yes|д|да)$') { return }
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $backupRoot = Join-Path $Dirs.Backups $stamp
+  $preRecords = @()
   if ($SelectedMethod -eq 'OptiScaler') {
     $archive = Ensure-LockedDownload 'optiscaler'
     Copy-Item -LiteralPath $archive -Destination (Join-Path $Dirs.Packages (Split-Path $archive -Leaf)) -Force
@@ -362,10 +446,9 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     $reshade = Ensure-LockedDownload 'reshade-full-addons'
     if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
     Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
-    $p = Start-Process -FilePath $reshade -ArgumentList @('--headless','--api',$Api,$exe) -Wait -PassThru
-    if ($p.ExitCode -ne 0) { throw ("ReShade setup failed with exit code {0}" -f $p.ExitCode) }
+    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot
   }
-  Run-Install $Path $manifestPath $exe
+  Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true
 }
 function Run-Restore {
   $items = Get-InstalledPackageManifest
@@ -383,6 +466,19 @@ function Run-Restore {
   $game = [string]$install.gamePath
   $installRoot = if ($install.installRoot) { [string]$install.installRoot } else { $game }
   if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из манифеста не найдена.' 'Game folder from manifest was not found.') }
+  $conflicts = @()
+  foreach ($entry in @($install.files)) {
+    if (-not $entry.installedSha256) { continue }
+    $destination = Join-Path $installRoot ([string]$entry.path)
+    if (Test-Path -LiteralPath $destination -PathType Leaf) {
+      $current = Get-Sha256 $destination
+      if ($current -ne ([string]$entry.installedSha256).ToLowerInvariant()) { $conflicts += [string]$entry.path }
+    }
+  }
+  if ($conflicts.Count -gt 0) {
+    Write-Host (T ("Изменённые после установки файлы: {0}" -f ($conflicts -join ', ')) ("Files changed after installation: {0}" -f ($conflicts -join ', '))) -ForegroundColor Yellow
+    if ((Read-Input 'Продолжить откат и перезаписать их? (y/n)' 'Continue restore and overwrite them? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
+  }
   if (-not (Ensure-Admin $game $selected.FullName)) { return }
   foreach ($entry in @($install.files)) {
     $destination = Join-Path $installRoot ([string]$entry.path)
@@ -490,7 +586,7 @@ function Main {
   if ($Action -eq 'Packages') { Run-Packages; return }
   if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Input 'ID источника из sources.lock.json' 'Source ID from sources.lock.json' }; Run-Download $SourceId; return }
   if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $null; return }
-  if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
+  if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest $ExecutablePath; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   while (Invoke-Menu) { }
 }

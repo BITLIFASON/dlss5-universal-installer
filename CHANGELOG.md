@@ -33,3 +33,7 @@
 - Added the documentation index to the root README and fixed guide links in docs/README.md.
 - Reworked the root README with a visual quick-start layout, table of contents, Mermaid workflow, compatibility summary, requirements, troubleshooting, and contribution guidance.
 - Cleaned and condensed docs/README.md, removed stale menu references, and separated overview content from detailed guides.
+- Hardened installation code: locked downloads now validate HTTPS and SHA-256 before fetching.
+- Preserved the selected executable across elevation relaunches and improved API hints using PE import strings.
+- Added transactional rollback for partial installs and tracked ReShade changes in the same installation manifest during Bootstrap.
+- Restore now warns before overwriting files whose post-install SHA-256 changed.

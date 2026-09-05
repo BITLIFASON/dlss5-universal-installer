@@ -34,3 +34,5 @@ Shared settings are in `config/settings.json`: language, supported APIs, mandato
 At any interactive prompt, enter 0 to cancel the current operation and return to the main menu. The command-line actions remain non-interactive when all required parameters are supplied.
 
 
+
+In the menu, choose **8 — Exit** to close the utility. For any game-folder prompt, enter 1 to open the standard Windows folder picker, or enter the path manually.

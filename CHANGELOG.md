@@ -14,3 +14,4 @@
 - Restore now lets the user choose the game and installation manifest to revert.
 - Documented custom package and alternate-version installation through local manifests.
 - Added universal 0 cancellation at interactive prompts; cancelled operations return to the main menu without installing files.
+- Added menu item 8 for a clean exit and a standard Windows folder picker for game paths.

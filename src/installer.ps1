@@ -43,6 +43,19 @@ function Read-Input([string]$ru,[string]$en) {
   if ($value -match '^(0|q|quit|cancel|отмена)$') { throw [System.OperationCanceledException]::new('Operation cancelled by user.') }
   return $value
 }
+function Select-GameFolder {
+  Add-Type -AssemblyName System.Windows.Forms
+  $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+  $dialog.Description = (T 'Выберите папку игры' 'Select the game folder')
+  $dialog.ShowNewFolderButton = $false
+  if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { return $dialog.SelectedPath }
+  throw [System.OperationCanceledException]::new('Folder selection cancelled.')
+}
+function Read-GamePath {
+  $value = Read-Input 'Укажите путь к игре или введите 1 для выбора через Explorer' 'Enter the game path or type 1 to browse with Explorer'
+  if ($value -eq '1') { return Select-GameFolder }
+  return $value
+}
 function Write-Log([string]$Message) {
   $line = "$(Get-Date -Format o) $Message"
   Add-Content -LiteralPath (Join-Path $Dirs.Logs 'installer.log') -Value $line -Encoding UTF8
@@ -276,7 +289,7 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте Restore.' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
 }
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
-  if (-not $Path) { $Path = Read-Input 'Укажите папку игры' 'Enter game folder' }
+  if (-not $Path) { $Path = Read-GamePath }
   $info = Get-GameInspection $Path
   if (-not $SelectedMethod) {
     Show-MethodComparison $info
@@ -342,30 +355,35 @@ function Invoke-Menu {
     Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
     Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
     Write-Host (T '7. Язык' '7. Language')
+    Write-Host (T '8. Выход' '8. Exit')
     switch (Read-Input 'Выберите действие' 'Choose action') {
       '1' { Run-Bootstrap $GamePath $Method $null }
-      '2' { $p = if ($GamePath) { $GamePath } else { Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Check $p }
+      '2' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Check $p }
       '3' { Run-Packages }
       '4' { $s = if ($SourceId) { $SourceId } else { Read-Input 'ID источника' 'Source ID' }; Run-Download $s }
-      '5' { $p = if ($GamePath) { $GamePath } else { Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Install $p $PackageManifest }
+      '5' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Install $p $PackageManifest }
       '6' { Run-Restore }
       '7' { Set-Language }
+      '8' { return $false }
       default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
     }
+    return $true
   } catch [System.OperationCanceledException] {
     Write-Host (T 'Операция отменена. Возврат в главное меню.' 'Operation cancelled. Returning to the main menu.') -ForegroundColor Yellow
+    return $true
   } catch {
     Write-Error $_
+    return $true
   }
 }
 function Main {
-  if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Check $GamePath; return }
+  if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-GamePath }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
   if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Input 'ID источника из sources.lock.json' 'Source ID from sources.lock.json' }; Run-Download $SourceId; return }
   if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $null; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
-  while ($true) { Invoke-Menu }
+  while (Invoke-Menu) { }
 }
 try { Main } catch { Write-Error $_; exit 1 }
 

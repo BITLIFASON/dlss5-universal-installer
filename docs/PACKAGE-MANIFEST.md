@@ -21,4 +21,4 @@ Installation is allowed only for a package already present in `packages` and des
 
 `source` records provenance for auditing. A public archive alone is not proof of safety. Until a manifest exists, the tool can only inventory and hash a package; it cannot install it.
 
-Automatic downloads use the separate `config/sources.lock.json` file. It must contain a specific version, an HTTPS release asset URL, and the expected SHA-256. `allowAutomaticDownloads` in `config/settings.json` is disabled by default for the standalone Download action; the explicit Bootstrap action performs the locked download flow.
+Automatic downloads use the separate `config/sources.lock.json` file. A GitHub source contains an exact repository, tag, asset filename, and expected SHA-256; non-GitHub sources use a fixed HTTPS `downloadUrl`. `allowAutomaticDownloads` is enabled for the pinned sources by default, while every download still requires HTTPS and a matching SHA-256.

@@ -13,19 +13,53 @@ Choose a game, inspect its real executable, select an integration method, downlo
 
 ## 📖 Contents
 
+- [🚀 Quick start](#-quick-start)
+- [🎮 In-game verification](#-in-game-verification)
+- [↩️ Restore](#️-restore)
 - [✨ Features](#-features)
-- [🔬 How it works](#-how-it-works)
 - [🎮 Installation methods](#-installation-methods)
 - [📊 Compatibility](#-compatibility)
-- [🚀 Quick start](#-quick-start)
 - [🧰 Custom packages and versions](#-custom-packages-and-versions)
-- [↩️ Restore](#️-restore)
+- [🔬 How it works](#-how-it-works)
 - [🛠️ Troubleshooting](#️-troubleshooting)
 - [💻 Requirements](#-requirements)
 - [📚 Documentation](#-documentation)
 - [🔐 Safety and scope](#-safety-and-scope)
 - [📁 Repository layout](#-repository-layout)
 - [📄 License](#-license)
+
+## 🚀 Quick start
+
+1. Download or clone the repository.
+2. Run `DLSS5-Universal.cmd`.
+3. Select **Automatic installation**.
+4. Enter the game path, or type `1` to open the Windows folder picker.
+5. Review the executable candidates and choose the real game executable. Avoid launchers, editors, crash reporters, and dedicated servers.
+6. Select Native/Bridge, OptiScaler, or ReShade + Feeder.
+7. Review the conflict report and installation plan, then confirm.
+8. Start the game and follow [In-game verification](#-in-game-verification).
+
+The tracked defaults are English, Simple interface, locked automatic downloads enabled, elevation warnings enabled, and unknown-file deletion disabled. Personal changes are saved to ignored `config/settings.local.json`.
+
+Enter `0` at any interactive prompt to cancel the current operation and return to the main menu. Use **Settings** to change language, interface mode, download policy, or elevation warnings.
+
+## 🎮 In-game verification
+
+After installation, use the same save, location, resolution, graphics preset, and camera position for each comparison:
+
+1. Launch the game through its normal launcher if it requires one.
+2. Load a repeatable save and wait 30–60 seconds after loading for shaders and streaming to settle.
+3. Capture a baseline in the same scene. Record native FPS, frame-time stability, and any visual artifacts.
+4. Check the image at rest and while rotating the camera: fine foliage, fences, neon signs, reflections, particles, hair, and UI should remain stable.
+5. If the method provides an in-game toggle, switch it once and compare the same view. For ReShade, `Home` usually opens the overlay, but the key can differ by preset.
+6. If frame generation is enabled, record both the displayed FPS and the native/pre-generation FPS. Judge smoothness from frame time and input latency, not the generated number alone.
+7. Play for 10–15 minutes and test a busy area, driving, menus, and a save/load transition before considering the installation stable.
+
+Do not stack methods. If the game crashes, the image is corrupted, or input latency becomes unacceptable, exit the game and use **Restore a selected installation** before trying another method. See the [full verification checklist](docs/IN-GAME-VERIFICATION.md).
+
+## ↩️ Restore
+
+Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. If a file changed after installation, the tool warns before overwriting it. Only files recorded by that installation are restored or removed; a full game copy is never created.
 
 ## ✨ Features
 
@@ -34,29 +68,13 @@ Choose a game, inspect its real executable, select an integration method, downlo
 - executable candidate scoring with Unreal/Unity technical-process filtering;
 - Windows Explorer folder picker and manual path input;
 - SHA-256 verification for downloads and staged files;
+- conflict report and dry-run installation plan;
 - point backups and manifest-based restore;
 - Simple and Advanced inspection views;
 - English and Russian interactive UI;
 - `0` cancellation at every interactive prompt;
 - custom local packages and alternate versions through manifests;
 - no full game backups and no automatic deletion of unknown files.
-
-## 🔬 How it works
-
-```mermaid
-flowchart LR
-    A[Select game folder] --> B[Inspect EXE candidates]
-    B --> C[Choose the real game EXE]
-    C --> D[Compare methods]
-    D --> E[Download pinned sources]
-    E --> F[Verify SHA-256]
-    F --> G[Create point backup]
-    G --> H[Install declared files]
-    H --> I[Launch and verify]
-    I --> J[Restore selected install if needed]
-```
-
-The inspection step is read-only. It reports executable architecture, API hints, native DLSS files, and common proxy DLLs. A detected candidate is a hint, not proof that injection will work.
 
 ## 🎮 Installation methods
 
@@ -80,21 +98,6 @@ The installer treats these methods as alternatives. Restore the selected install
 
 See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits.
 
-## 🚀 Quick start
-
-1. Download or clone the repository.
-2. Run `DLSS5-Universal.cmd`.
-3. Select **Automatic installation**.
-4. Enter the game path, or type `1` to open the Windows folder picker.
-5. Review the executable candidates and choose the real game executable.
-6. Select Native/Bridge, OptiScaler, or ReShade + Feeder.
-7. Review the package and confirm installation.
-8. Launch the game and compare the same scene before and after installation.
-
-The tracked defaults are English, Simple interface, locked automatic downloads enabled, elevation warnings enabled, and unknown-file deletion disabled. Personal changes are saved to ignored `config/settings.local.json`.
-
-Enter `0` at any interactive prompt to cancel the current operation and return to the main menu. Choose **Settings** to change language, interface mode, download policy, or elevation warnings. Choose **Exit** to close the utility.
-
 ## 🧰 Custom packages and versions
 
 To install a different version or an unlisted package:
@@ -105,17 +108,30 @@ To install a different version or an unlisted package:
 
 The tool does not download arbitrary URLs automatically and does not delete files absent from the manifest.
 
-## ↩️ Restore
+## 🔬 How it works
 
-Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. Only files recorded by that installation are restored or removed; a full game copy is never created.
+```mermaid
+flowchart LR
+    A[Select game folder] --> B[Inspect EXE candidates]
+    B --> C[Choose the real game EXE]
+    C --> D[Compare methods]
+    D --> E[Download pinned sources]
+    E --> F[Verify SHA-256]
+    F --> G[Create point backup]
+    G --> H[Install declared files]
+    H --> I[Verify in game]
+    I --> J[Restore selected install if needed]
+```
+
+Inspection is read-only. It reports executable architecture, API hints, native DLSS files, process state, and common proxy DLLs. A detected candidate is a hint, not proof that injection will work.
 
 ## 🛠️ Troubleshooting
 
-- Wrong executable: run `Check`, then select the real game EXE during installation.
+- Wrong executable: run **Check**, then select the real game EXE during installation.
 - Game fails to launch: use **Restore a selected installation** before trying another method.
-- Image is unchanged: verify the selected method, ReShade add-on installation, and the target executable.
+- Image is unchanged: verify the selected method, ReShade add-on installation, and target executable.
 - Download or install stops: run **Inventory packages and SHA-256** and compare against the lockfile and package manifest.
-- Need more detail: switch to **Advanced** interface mode and keep the generated JSON inspection manifest with the installer log.
+- Need more detail: switch to **Advanced** interface mode and keep the JSON inspection manifest with the installer log.
 
 See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 
@@ -133,6 +149,7 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 | Document | Purpose |
 |---|---|
 | [Portable tool guide](docs/README.md) | Actions, profiles, settings, and operating flow |
+| [In-game verification](docs/IN-GAME-VERIFICATION.md) | Repeatable visual, FPS, stability, and rollback checks |
 | [Components and sources](docs/COMPONENTS.md) | Pinned versions, official upstream links, and file groups |
 | [Compatibility matrix](docs/COMPATIBILITY.md) | Supported APIs, methods, and current boundaries |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Recovery steps and diagnostic collection |

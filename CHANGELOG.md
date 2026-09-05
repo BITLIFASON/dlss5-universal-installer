@@ -38,3 +38,6 @@
 - Added transactional rollback for partial installs and tracked ReShade changes in the same installation manifest during Bootstrap.
 - Restore now warns before overwriting files whose post-install SHA-256 changed.
 - Added process and proxy-DLL diagnostics, a dry-run installation plan, local per-game profiles, and optional post-install launch verification.
+- Reworked locked sources to keep GitHub repository/tag/asset metadata separate from generated download URLs.
+- Added a streamed download progress bar with temporary-file cleanup on interrupted downloads.
+- Reordered the root README around the user workflow and added an in-game verification checklist.

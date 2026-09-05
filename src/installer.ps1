@@ -223,19 +223,66 @@ function Get-SourceLock {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw (T 'Файл sources.lock.json не найден.' 'sources.lock.json was not found.') }
   Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 }
+function Get-SourceDownloadUrl($Source) {
+  if ($Source.downloadUrl) { return [string]$Source.downloadUrl }
+  if ($Source.url) { return [string]$Source.url }
+  if ($Source.provider -eq 'github' -and $Source.repository -and $Source.tag -and $Source.asset) {
+    return ("https://github.com/{0}/releases/download/{1}/{2}" -f $Source.repository,$Source.tag,$Source.asset)
+  }
+  throw ("Locked source has no resolvable download URL: {0}" -f $Source.id)
+}
+function Invoke-ProgressDownload([string]$Url,[string]$Destination) {
+  $temporary = "$Destination.download"
+  if (Test-Path -LiteralPath $temporary -PathType Leaf) { Remove-Item -LiteralPath $temporary -Force }
+  $request = [Net.HttpWebRequest]::Create($Url)
+  $request.UserAgent = 'DLSS5-Universal-Installer/1.0'
+  $response = $null
+  $inputStream = $null
+  $outputStream = $null
+  try {
+    $response = $request.GetResponse()
+    $inputStream = $response.GetResponseStream()
+    $outputStream = [IO.File]::Open($temporary,[IO.FileMode]::Create,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    $buffer = New-Object byte[] (1024 * 1024)
+    $total = [int64]$response.ContentLength
+    $received = [int64]0
+    while (($read = $inputStream.Read($buffer,0,$buffer.Length)) -gt 0) {
+      $outputStream.Write($buffer,0,$read)
+      $received += $read
+      if ($total -gt 0) {
+        $percent = [math]::Min(100,[math]::Floor(($received * 100) / $total))
+        Write-Progress -Activity (T 'Скачивание компонента' 'Downloading component') -Status ("{0:N1} / {1:N1} MB" -f ($received/1MB),($total/1MB)) -PercentComplete $percent
+      } else {
+        Write-Progress -Activity (T 'Скачивание компонента' 'Downloading component') -Status ("{0:N1} MB" -f ($received/1MB))
+      }
+    }
+    $outputStream.Close(); $outputStream = $null
+    if ($response) { $response.Close(); $response = $null }
+    Write-Progress -Activity (T 'Скачивание компонента' 'Downloading component') -Completed
+    Move-Item -LiteralPath $temporary -Destination $Destination -Force
+  } catch {
+    if (Test-Path -LiteralPath $temporary -PathType Leaf) { Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue }
+    throw
+  } finally {
+    if ($outputStream) { $outputStream.Dispose() }
+    if ($inputStream) { $inputStream.Dispose() }
+    if ($response) { $response.Close() }
+  }
+}
 function Ensure-LockedDownload([string]$Id) {
   $lock = Get-SourceLock
   $source = @($lock.sources | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
   if ($null -eq $source) { throw ("Unknown locked source: {0}" -f $Id) }
-  if ([string]$source.url -notmatch '^https://') { throw ("Locked source is not HTTPS: {0}" -f $Id) }
+  $url = Get-SourceDownloadUrl $source
+  if ($url -notmatch '^https://') { throw ("Locked source is not HTTPS: {0}" -f $Id) }
   if ([string]$source.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw ("Locked source has no valid SHA-256: {0}" -f $Id) }
-  $name = [IO.Path]::GetFileName(([Uri]$source.url).AbsolutePath)
+  $name = [IO.Path]::GetFileName(([Uri]$url).AbsolutePath)
   $path = Join-Path $Dirs.Downloads $name
   if (Test-Path -LiteralPath $path -PathType Leaf) {
     if ((Get-Sha256 $path) -eq ([string]$source.sha256).ToLowerInvariant()) { return $path }
     Remove-Item -LiteralPath $path -Force
   }
-  Invoke-WebRequest -Uri $source.url -OutFile $path -UseBasicParsing
+  Invoke-ProgressDownload $url $path
   if ((Get-Sha256 $path) -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $path -Force; throw ("SHA-256 mismatch for source: {0}" -f $Id) }
   return $path
 }
@@ -262,13 +309,14 @@ function Run-Download([string]$Id) {
   $lock = Get-SourceLock
   $source = @($lock.sources | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
   if ($null -eq $source) { throw ("Unknown locked source: {0}" -f $Id) }
-  if ([string]::IsNullOrWhiteSpace([string]$source.url) -or [string]$source.url -notmatch '^https://') { throw (T 'Для источника нужен HTTPS URL.' 'A HTTPS URL is required for the source.') }
+  $url = Get-SourceDownloadUrl $source
+  if ([string]::IsNullOrWhiteSpace($url) -or $url -notmatch '^https://') { throw (T 'Для источника нужен HTTPS URL.' 'A HTTPS URL is required for the source.') }
   if ([string]$source.sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw (T 'Для источника не задан ожидаемый SHA-256.' 'Expected SHA-256 is not set for this source.') }
-  $name = [IO.Path]::GetFileName(([Uri]$source.url).AbsolutePath)
+  $name = [IO.Path]::GetFileName(([Uri]$url).AbsolutePath)
   if ([string]::IsNullOrWhiteSpace($name) -or $name -eq '/') { $name = "$($source.id)-$($source.version).download" }
   $download = Join-Path $Dirs.Downloads $name
   Write-Host (T ("Скачивание {0} {1}..." -f $source.id,$source.version) ("Downloading {0} {1}..." -f $source.id,$source.version))
-  Invoke-WebRequest -Uri $source.url -OutFile $download -UseBasicParsing
+  Invoke-ProgressDownload $url $download
   $actual = Get-Sha256 $download
   if ($actual -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $download -Force; throw (T 'SHA-256 скачанного файла не совпал; файл удалён.' 'Downloaded SHA-256 did not match; file was removed.') }
   Copy-Item -LiteralPath $download -Destination (Join-Path $Dirs.Packages $name) -Force

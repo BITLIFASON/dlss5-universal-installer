@@ -23,7 +23,7 @@ src\installer.ps1 -Action Install -GamePath "C:\Games\MyGame" -PackageManifest "
 src\installer.ps1 -Action Restore
 ```
 
-`Download` retrieves one locked source. `Bootstrap` performs the complete automatic flow. `Install` works with a package manifest, including a custom version. `Restore` lists previous installation manifests and lets you choose which game to revert.
+`Download` retrieves one locked source. GitHub URLs are generated from the pinned repository, tag, and asset filename in `config/sources.lock.json`; other sources keep a fixed `downloadUrl`. `Bootstrap` performs the complete automatic flow. `Install` works with a package manifest, including a custom version. `Restore` lists previous installation manifests and lets you choose which game to revert.
 
 ## Profiles
 
@@ -45,6 +45,7 @@ Runtime downloads, staging files, backups, generated manifests, logs, and person
 
 ## Public guides
 
+- [In-game verification](IN-GAME-VERIFICATION.md) — repeatable visual, FPS, stability, and rollback checks;
 - [Components and sources](COMPONENTS.md) — pinned versions, official upstream releases, and file groups;
 - [Compatibility matrix](COMPATIBILITY.md) — supported APIs, methods, and current boundaries;
 - [Troubleshooting](TROUBLESHOOTING.md) — recovery steps and diagnostic collection;

@@ -18,6 +18,6 @@ The installable file lists and per-file hashes are kept in the repository:
 - [`packages/optiscaler.manifest.json`](../packages/optiscaler.manifest.json) — OptiScaler;
 - [`packages/dlss5-feeder.manifest.json`](../packages/dlss5-feeder.manifest.json) — ReShade + Feeder.
 
-The locked download URLs, versions, licenses, and archive SHA-256 values are recorded in [`config/sources.lock.json`](../config/sources.lock.json). A matching hash confirms that the downloaded bytes equal the locked asset; it is not a safety certification.
+The locked download metadata, versions, licenses, and archive SHA-256 values are recorded in [`config/sources.lock.json`](../config/sources.lock.json). GitHub assets use an exact repository, tag, and filename; the installer derives the release download URL from those fields. A matching hash confirms that the downloaded bytes equal the locked asset; it is not a safety certification.
 
 The installer does not ship proprietary NVIDIA binaries or redistribute the downloaded archives through Git. It retrieves the pinned upstream assets when the selected flow requires them.

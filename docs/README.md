@@ -10,8 +10,11 @@
 
 - `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — только анализ игры и JSON manifest;
 - `src\installer.ps1 -Action Packages` — список локальных архивов/DLL из `packages` и их SHA-256.
+- `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — проверка, backup и установка перечисленных файлов;
+- `src\installer.ps1 -Action Restore` — откат последней установки по manifest.
 
 Пустой каталог `packages` тоже фиксируется manifest-файлом. Скачивание из сети пока намеренно отключено.
+Установка принимает только ZIP-архив и manifest с совпадающим SHA-256 архива и хешами каждого файла. Неизвестные файлы не удаляются.
 
 Профили:
 

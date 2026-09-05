@@ -1,7 +1,8 @@
 ﻿[CmdletBinding()]
 param(
-  [ValidateSet('Menu','Check','Packages')][string]$Action = 'Menu',
-  [string]$GamePath
+  [ValidateSet('Menu','Check','Packages','Install','Restore')][string]$Action = 'Menu',
+  [string]$GamePath,
+  [string]$PackageManifest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +12,7 @@ $Dirs = @{
   Backups = Join-Path $Root 'backups'
   Packages = Join-Path $Root 'packages'
   Manifests = Join-Path $Root 'manifests'
+  Staging = Join-Path $Root 'staging'
 }
 $Dirs.Values | ForEach-Object { New-Item -ItemType Directory -Force -Path $_ | Out-Null }
 $SettingsPath = Join-Path $Root 'config\settings.json'
@@ -118,6 +120,93 @@ function Run-Packages {
   $manifest = Save-JsonManifest 'packages' $inventory
   Write-Log ("PACKAGES; manifest={0}" -f $manifest)
 }
+function Test-SafeRelativePath([string]$Path) {
+  if ([string]::IsNullOrWhiteSpace($Path) -or [IO.Path]::IsPathRooted($Path) -or $Path.Replace('/','\') -match '(^|\\)\.\.([\\]|$)') { return $false }
+  return $true
+}
+function Get-PackageManifest([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw (T 'Manifest пакета не найден.' 'Package manifest was not found.') }
+  $manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+  foreach ($required in @('id','version','method','archive','sha256','source','files')) {
+    if ($null -eq $manifest.$required) { throw ("Package manifest is missing: {0}" -f $required) }
+  }
+  if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'Неизвестный метод в manifest.' 'Unknown method in package manifest.') }
+  $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
+  if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в packages.' 'Package archive is missing from packages.') }
+  if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с manifest.' 'Archive SHA-256 does not match the manifest.') }
+  foreach ($entry in @($manifest.files)) {
+    if (-not (Test-SafeRelativePath ([string]$entry.path)) -or [string]::IsNullOrWhiteSpace([string]$entry.sha256)) { throw (T 'Некорректный список файлов manifest.' 'Invalid file list in package manifest.') }
+  }
+  $manifest | Add-Member -NotePropertyName _archivePath -NotePropertyValue $archive -Force
+  return $manifest
+}
+function Get-InstalledPackageManifest {
+  @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+}
+function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
+  $probe = Join-Path $InstallGamePath ('.dlss5-write-test-' + [guid]::NewGuid().ToString('N'))
+  try { New-Item -ItemType File -Path $probe -Force | Out-Null; Remove-Item -LiteralPath $probe -Force; return $true } catch { }
+  $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return $true }
+  if ($Settings.warnBeforeElevation) {
+    $answer = Read-Host (T 'Установка может потребовать права администратора. Перезапустить с повышенными правами? (y/n)' 'Installation may require administrator rights. Relaunch elevated? (y/n)')
+    if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
+  }
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`""
+  Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
+  return $false
+}
+function Run-Install([string]$Path,[string]$ManifestPath) {
+  if (-not $ManifestPath) { $ManifestPath = Read-Host (T 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)') }
+  $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
+  $info = Get-GameInspection $game
+  Show-MethodComparison $info
+  $manifest = Get-PackageManifest (Resolve-Path -LiteralPath $ManifestPath).Path
+  Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
+  if ((Read-Host (T 'Продолжить установку? (y/n)' 'Continue installation? (y/n)')) -notmatch '^(y|yes|д|да)$') { return }
+  if (-not (Ensure-Admin $game $ManifestPath)) { return }
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $stage = Join-Path $Dirs.Staging $stamp
+  New-Item -ItemType Directory -Force -Path $stage | Out-Null
+  Expand-Archive -LiteralPath $manifest._archivePath -DestinationPath $stage -Force
+  $backupRoot = Join-Path $Dirs.Backups $stamp
+  $records = @()
+  foreach ($entry in @($manifest.files)) {
+    $relative = ([string]$entry.path).Replace('/','\')
+    $source = Join-Path $stage $relative
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
+    if ((Get-Sha256 $source) -ne ([string]$entry.sha256).ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
+    $destination = Join-Path $game $relative
+    if (Test-Path -LiteralPath $destination -PathType Leaf) {
+      $backup = Join-Path $backupRoot $relative
+      New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
+      Copy-Item -LiteralPath $destination -Destination $backup -Force
+      $records += [ordered]@{ path=$relative; existed=$true; originalSha256=Get-Sha256 $destination; backup=$backup }
+    } else { $records += [ordered]@{ path=$relative; existed=$false; originalSha256=$null; backup=$null } }
+    New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+    Copy-Item -LiteralPath $source -Destination $destination -Force
+  }
+  $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
+  $installPath = Save-JsonManifest 'install' $install
+  Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
+  Write-Host (T 'Установка завершена. Для отката используйте пункт Restore.' 'Installation completed. Use Restore to roll back.') -ForegroundColor Green
+}
+function Run-Restore {
+  $items = Get-InstalledPackageManifest
+  if ($items.Count -eq 0) { Write-Host (T 'Установок для отката не найдено.' 'No installations to restore.') -ForegroundColor Yellow; return }
+  $selected = $items[0]
+  $install = Get-Content -LiteralPath $selected.FullName -Raw | ConvertFrom-Json
+  $game = [string]$install.gamePath
+  if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из manifest не найдена.' 'Game folder from manifest was not found.') }
+  if (-not (Ensure-Admin $game $selected.FullName)) { return }
+  foreach ($entry in @($install.files)) {
+    $destination = Join-Path $game ([string]$entry.path)
+    if ($entry.existed -and (Test-Path -LiteralPath $entry.backup -PathType Leaf)) { Copy-Item -LiteralPath $entry.backup -Destination $destination -Force }
+    elseif (-not $entry.existed -and (Test-Path -LiteralPath $destination -PathType Leaf)) { Remove-Item -LiteralPath $destination -Force }
+  }
+  Write-Log ("RESTORE {0}; source={1}" -f $game,$selected.FullName)
+  Write-Host (T 'Откат завершён.' 'Restore completed.') -ForegroundColor Green
+}
 function Set-Language {
   $value = Read-Host (T 'Язык (ru/en)' 'Language (ru/en)')
   if ($value -notmatch '^(ru|en)$') { throw (T 'Допустимы только ru или en.' 'Only ru or en are accepted.') }
@@ -128,17 +217,19 @@ function Set-Language {
 function Main {
   if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
+  if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
+  if ($Action -eq 'Restore') { Run-Restore; return }
   Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
   Write-Host (T '1. Проверить игру' '1. Check game')
   Write-Host (T '2. Проверить packages и SHA-256' '2. Inventory packages and SHA-256')
-  Write-Host (T '3. Установка (следующий этап)' '3. Install (next stage)')
-  Write-Host (T '4. Восстановление (следующий этап)' '4. Restore (next stage)')
+  Write-Host (T '3. Установка проверенного пакета' '3. Install a verified package')
+  Write-Host (T '4. Восстановление последней установки' '4. Restore latest installation')
   Write-Host (T '5. Язык' '5. Language')
   switch (Read-Host (T 'Выберите действие' 'Choose action')) {
     '1' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $p }
     '2' { Run-Packages }
-    '3' { Write-Host (T 'Установка будет добавлена после проверки реальных пакетов и manifest.' 'Installation will be added after real package and manifest verification.') -ForegroundColor Yellow }
-    '4' { Write-Host (T 'Восстановление будет добавлено после первой установки.' 'Restore will be added after the first installation.') -ForegroundColor Yellow }
+    '3' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
+    '4' { Run-Restore }
     '5' { Set-Language }
     default { Write-Host (T 'Отмена.' 'Cancelled.') }
   }

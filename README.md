@@ -52,7 +52,11 @@ The Bootstrap flow uses the locked entries in `config/sources.lock.json`. It can
 
 Automatic downloads are enabled by default for these pinned sources. The installer rejects non-HTTPS sources and entries without a 64-character SHA-256. A hash confirms file identity; it does not prove that third-party code is safe.
 
-## Components and sources\n\nSee [Components and sources](docs/COMPONENTS.md) for the pinned versions, official upstream links, installed file groups, package manifests, and SHA-256 lockfile.\n\n## Custom packages and versions
+## Components and sources
+
+See [Components and sources](docs/COMPONENTS.md) for the pinned versions, official upstream links, installed file groups, package manifests, and SHA-256 lockfile.
+
+## Custom packages and versions
 
 To install a different version or a package that is not part of Bootstrap:
 
@@ -103,4 +107,5 @@ src\installer.ps1 -Action Restore
 - `docs/` — public operating and safety documentation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [docs/README.md](docs/README.md), and [LICENSE](LICENSE).
+
 

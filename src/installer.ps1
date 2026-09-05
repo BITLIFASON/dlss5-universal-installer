@@ -19,6 +19,7 @@ $Dirs = @{
 }
 $Dirs.Values | ForEach-Object { New-Item -ItemType Directory -Force -Path $_ | Out-Null }
 $SettingsPath = Join-Path $Root 'config\settings.json'
+$LocalSettingsPath = Join-Path $Root 'config\settings.local.json'
 
 function Get-Settings {
   if (-not (Test-Path -LiteralPath $SettingsPath)) {
@@ -33,7 +34,14 @@ function Get-Settings {
       deleteUnknownFiles = $false
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
   }
-  Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json
+  $settings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json
+  if (Test-Path -LiteralPath $LocalSettingsPath -PathType Leaf) {
+    $local = Get-Content -LiteralPath $LocalSettingsPath -Raw | ConvertFrom-Json
+    foreach ($property in $local.PSObject.Properties) {
+      if ($property.Name -ne '_comments') { $settings | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force }
+    }
+  }
+  return $settings
 }
 $Settings = Get-Settings
 
@@ -388,7 +396,7 @@ function Set-Language {
   $value = Read-Input 'Язык (ru/en)' 'Language (ru/en)'
   if ($value -notmatch '^(ru|en)$') { throw (T 'Допустимы только ru или en.' 'Only ru or en are accepted.') }
   $Settings.language = $value
-  $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
+  Save-LocalSettings
   $script:Settings = Get-Settings
 }
 function Set-InterfaceMode {
@@ -398,9 +406,16 @@ function Set-InterfaceMode {
   if ($value -eq '1') { $Settings.interfaceMode = 'simple' }
   elseif ($value -eq '2') { $Settings.interfaceMode = 'advanced' }
   else { throw (T 'Допустимы только 1 или 2.' 'Only 1 or 2 are accepted.') }
-  $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
+  Save-LocalSettings
   $script:Settings = Get-Settings
   Write-Host (T 'Режим интерфейса сохранён.' 'Interface mode saved.') -ForegroundColor Green
+}
+function Save-LocalSettings {
+  $local = [ordered]@{}
+  foreach ($name in @('language','interfaceMode','allowAutomaticDownloads','warnBeforeElevation','deleteUnknownFiles')) {
+    if ($Settings.PSObject.Properties.Name -contains $name) { $local[$name] = $Settings.$name }
+  }
+  $local | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $LocalSettingsPath -Encoding UTF8
 }
 function Set-BooleanSetting([string]$Property,[string]$ru,[string]$en) {
   $current = [bool]$Settings.$Property
@@ -410,7 +425,7 @@ function Set-BooleanSetting([string]$Property,[string]$ru,[string]$en) {
   if ($value -match '^(y|yes|д|да)$') { $Settings.$Property = $true }
   elseif ($value -match '^(n|no|н|нет)$') { $Settings.$Property = $false }
   else { throw (T 'Введите y или n.' 'Enter y or n.') }
-  $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
+  Save-LocalSettings
   $script:Settings = Get-Settings
   Write-Host (T 'Настройка сохранена.' 'Setting saved.') -ForegroundColor Green
 }
@@ -480,6 +495,7 @@ function Main {
   while (Invoke-Menu) { }
 }
 try { Main } catch { Write-Error $_; exit 1 }
+
 
 
 

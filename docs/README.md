@@ -43,3 +43,5 @@ Before installation, the tool scores executable candidates and filters common Un
 
 The main menu keeps user preferences under **Settings**. This submenu contains language, interface mode, automatic-download policy, and the elevation warning toggle. The main menu has a separate **Exit** item.
 
+
+Personal preferences are stored in the ignored `config/settings.local.json` file. The tracked `config/settings.json` remains the English default template, so changing options from the Settings menu does not create a Git diff. Delete the local file to return to repository defaults.

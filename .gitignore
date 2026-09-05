@@ -16,3 +16,5 @@ manifests/*
 *.log
 *.tmp
 Thumbs.db
+
+config/settings.local.json

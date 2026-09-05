@@ -21,3 +21,4 @@
 - Changed defaults for a typical English user: English language, simple interface, disabled automatic downloads, enabled elevation warning, and no deletion of unknown files.
 - Enabled automatic downloads by default for locked, SHA-256-pinned sources.
 - Updated the fallback configuration and documentation to match the enabled locked-download default.
+- Added ignored `config/settings.local.json` overrides so personal language and interface preferences are not pushed to the repository.

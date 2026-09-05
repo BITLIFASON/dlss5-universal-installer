@@ -124,7 +124,7 @@ function Find-GameExecutables([string]$Path) {
   $items = @(Get-ChildItem -LiteralPath $Path -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch '\\(redist|support|tools|crash|_commonredist)\\' -and -not (Test-TechnicalExecutable $_ $Path) } |
     Sort-Object Length -Descending)
-  if ($items.Count -eq 0) { throw (T 'В папке не найден EXE.' 'No executable was found in the folder.') }
+  if ($items.Count -eq 0) { throw (T 'В папке не найден исполняемый файл.' 'No executable was found in the folder.') }
   foreach ($item in $items) { Add-Member -InputObject $item -NotePropertyName candidateScore -NotePropertyValue (Get-ExecutableScore $item $Path) -Force }
   return @($items | Sort-Object candidateScore,Length -Descending | Select-Object -First 20)
 }
@@ -151,21 +151,21 @@ function Get-GameInspection([string]$Path) {
 function Select-Executable($Info) {
   $candidates = @($Info.executables)
   if ($candidates.Count -eq 1) { return [string]$candidates[0].path }
-  Write-Host ''; Write-Host (T 'Кандидаты EXE для установки:' 'Executable candidates for installation:') -ForegroundColor Cyan
+  Write-Host ''; Write-Host (T 'Кандидаты исполняемых файлов для установки:' 'Executable candidates for installation:') -ForegroundColor Cyan
   for ($i = 0; $i -lt $candidates.Count; $i++) {
     $candidate = $candidates[$i]
     Write-Host ("{0}. {1} | {2} | score={3}" -f ($i + 1),$candidate.path,$candidate.architecture,$candidate.candidateScore)
   }
   $choice = Read-Input 'Выберите номер EXE' 'Choose the executable number'
   $index = 0
-  if (-not [int]::TryParse($choice,[ref]$index) -or $index -lt 1 -or $index -gt $candidates.Count) { throw (T 'Некорректный номер EXE.' 'Invalid executable number.') }
+  if (-not [int]::TryParse($choice,[ref]$index) -or $index -lt 1 -or $index -gt $candidates.Count) { throw (T 'Некорректный номер исполняемого файла.' 'Invalid executable number.') }
   return [string]$candidates[$index - 1].path
 }
 function Show-MethodComparison($Info) {
   Write-Host ''; Write-Host (T 'Сравнение методов:' 'Method comparison:') -ForegroundColor Cyan
   if ($Info.nativeDlssDetected) { Write-Host (T '1. Native/Bridge — обнаружен штатный DLSS; обычно минимальная нагрузка.' '1. Native/Bridge — native DLSS detected; usually lowest overhead.') } else { Write-Host (T '1. Native/Bridge — штатный DLSS не найден, сначала проверить вручную.' '1. Native/Bridge — native DLSS not detected; verify manually first.') -ForegroundColor DarkGray }
-  Write-Host (T '2. OptiScaler — широкая совместимость; возможны конфликты proxy DLL.' '2. OptiScaler — broad compatibility; proxy DLL conflicts are possible.')
-  Write-Host (T '3. ReShade + Feeder — постобработка; требует depth/motion vectors и обычно дороже по FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
+  Write-Host (T '2. OptiScaler — широкая совместимость; возможны конфликты DLL-прокси.' '2. OptiScaler — broad compatibility; proxy DLL conflicts are possible.')
+  Write-Host (T '3. ReShade + Feeder — постобработка; требует буфер глубины и векторы движения, обычно снижает FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
 }
 function Save-JsonManifest([string]$Prefix,$Object) {
   $name = '{0}-{1}.json' -f $Prefix,(Get-Date -Format 'yyyyMMdd-HHmmss')
@@ -189,7 +189,7 @@ function Run-Check([string]$Path) {
 }
 function Run-Packages {
   $inventory = Get-PackageInventory
-  if ($inventory.Count -eq 0) { Write-Host (T 'В packages пока нет архивов или DLL.' 'No archives or DLLs found in packages yet.') -ForegroundColor Yellow }
+  if ($inventory.Count -eq 0) { Write-Host (T 'В папке пакетов пока нет архивов или DLL.' 'No archives or DLLs found in packages yet.') -ForegroundColor Yellow }
   else { $inventory | Format-Table name,extension,size,sha256 -AutoSize }
   $manifest = Save-JsonManifest 'packages' $inventory
   Write-Log ("PACKAGES; manifest={0}" -f $manifest)
@@ -247,29 +247,29 @@ function Run-Download([string]$Id) {
   if ($actual -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $download -Force; throw (T 'SHA-256 скачанного файла не совпал; файл удалён.' 'Downloaded SHA-256 did not match; file was removed.') }
   Copy-Item -LiteralPath $download -Destination (Join-Path $Dirs.Packages $name) -Force
   Write-Log ("DOWNLOAD {0} {1}; sha256={2}" -f $source.id,$source.version,$actual)
-  Write-Host (T 'Проверенный архив помещён в packages.' 'Verified archive copied to packages.') -ForegroundColor Green
+  Write-Host (T 'Проверенный архив помещён в папку пакетов.' 'Verified archive copied to packages.') -ForegroundColor Green
 }
 function Test-SafeRelativePath([string]$Path) {
   if ([string]::IsNullOrWhiteSpace($Path) -or [IO.Path]::IsPathRooted($Path) -or $Path.Replace('/','\') -match '(^|\\)\.\.([\\]|$)') { return $false }
   return $true
 }
 function Get-PackageManifest([string]$Path) {
-  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw (T 'Manifest пакета не найден.' 'Package manifest was not found.') }
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw (T 'Манифест пакета не найден.' 'Package manifest was not found.') }
   $manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
   foreach ($required in @('id','version','method','source','files')) {
     if ($null -eq $manifest.$required) { throw ("Package manifest is missing: {0}" -f $required) }
   }
-  if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'Неизвестный метод в manifest.' 'Unknown method in package manifest.') }
+  if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'В манифесте указан неизвестный метод.' 'Unknown method in package manifest.') }
   if (-not $manifest.sourcePackage) {
-    if ($null -eq $manifest.archive -or $null -eq $manifest.sha256) { throw (T 'В manifest отсутствуют archive или sha256.' 'Manifest is missing archive or sha256.') }
+    if ($null -eq $manifest.archive -or $null -eq $manifest.sha256) { throw (T 'В манифесте отсутствуют archive или sha256.' 'Manifest is missing archive or sha256.') }
     $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
-    if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в packages.' 'Package archive is missing from packages.') }
-    if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с manifest.' 'Archive SHA-256 does not match the manifest.') }
+    if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в папке пакетов.' 'Package archive is missing from packages.') }
+    if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с манифестом.' 'Archive SHA-256 does not match the manifest.') }
     $manifest | Add-Member -NotePropertyName _archivePath -NotePropertyValue $archive -Force
   }
   foreach ($entry in @($manifest.files)) {
-    if (-not (Test-SafeRelativePath ([string]$entry.path)) -or [string]::IsNullOrWhiteSpace([string]$entry.sha256)) { throw (T 'Некорректный список файлов manifest.' 'Invalid file list in package manifest.') }
-    if ($entry.sourcePath -and -not (Test-SafeRelativePath ([string]$entry.sourcePath))) { throw (T 'Некорректный sourcePath manifest.' 'Invalid sourcePath in package manifest.') }
+    if (-not (Test-SafeRelativePath ([string]$entry.path)) -or [string]::IsNullOrWhiteSpace([string]$entry.sha256)) { throw (T 'Некорректный список файлов в манифесте.' 'Invalid file list in package manifest.') }
+    if ($entry.sourcePath -and -not (Test-SafeRelativePath ([string]$entry.sourcePath))) { throw (T 'Некорректный sourcePath в манифесте.' 'Invalid sourcePath in package manifest.') }
   }
   return $manifest
 }
@@ -340,7 +340,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
-  Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте Restore.' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
+  Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте «Восстановление».' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
 }
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   if (-not $Path) { $Path = Read-GamePath }
@@ -351,7 +351,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   }
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
-  if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный manifest метода не найден.' 'Prepared method manifest was not found.') }
+  if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }
   $exe = Select-Executable $info
   if ($SelectedMethod -eq 'OptiScaler') {
     $archive = Ensure-LockedDownload 'optiscaler'
@@ -382,7 +382,7 @@ function Run-Restore {
   $install = Get-Content -LiteralPath $selected.FullName -Raw | ConvertFrom-Json
   $game = [string]$install.gamePath
   $installRoot = if ($install.installRoot) { [string]$install.installRoot } else { $game }
-  if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из manifest не найдена.' 'Game folder from manifest was not found.') }
+  if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из манифеста не найдена.' 'Game folder from manifest was not found.') }
   if (-not (Ensure-Admin $game $selected.FullName)) { return }
   foreach ($entry in @($install.files)) {
     $destination = Join-Path $installRoot ([string]$entry.path)
@@ -459,7 +459,7 @@ function Invoke-Menu {
     Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
     Write-Host (T '1. Автоматическая установка' '1. Automatic installation')
     Write-Host (T '2. Проверить игру' '2. Check game')
-    Write-Host (T '3. Проверить packages и SHA-256' '3. Inventory packages and SHA-256')
+    Write-Host (T '3. Проверить пакеты и SHA-256' '3. Inventory packages and SHA-256')
     Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
     Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
     Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
@@ -495,6 +495,8 @@ function Main {
   while (Invoke-Menu) { }
 }
 try { Main } catch { Write-Error $_; exit 1 }
+
+
 
 
 

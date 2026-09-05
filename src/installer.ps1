@@ -1,9 +1,10 @@
 ﻿[CmdletBinding()]
 param(
-  [ValidateSet('Menu','Check','Packages','Download','Install','Restore')][string]$Action = 'Menu',
+  [ValidateSet('Menu','Check','Packages','Download','Bootstrap','Install','Restore')][string]$Action = 'Menu',
   [string]$GamePath,
   [string]$PackageManifest,
-  [string]$SourceId
+  [string]$SourceId,
+  [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method
 )
 
 $ErrorActionPreference = 'Stop'
@@ -232,6 +233,27 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
   Write-Host (T 'Установка завершена. Для отката используйте пункт Restore.' 'Installation completed. Use Restore to roll back.') -ForegroundColor Green
 }
+function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
+  if (-not $Path) { $Path = Read-Host (T 'Укажите папку игры' 'Enter game folder') }
+  $info = Get-GameInspection $Path
+  if (-not $SelectedMethod) {
+    Show-MethodComparison $info
+    $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Host (T 'Метод (1-3)' 'Method (1-3)')) - 1]
+  }
+  $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
+  $manifestPath = Join-Path $Root $map[$SelectedMethod]
+  if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный manifest метода не найден.' 'Prepared method manifest was not found.') }
+  $exe = $info.primaryExecutable
+  if ($SelectedMethod -in @('NativeBridge','Feeder')) {
+    $reshade = Join-Path $Dirs.Downloads 'ReShade_Setup_6.8.0_Addon.exe'
+    if (-not (Test-Path -LiteralPath $reshade)) { throw (T 'Сначала скачайте ReShade 6.8.0 Add-on.' 'Download ReShade 6.8.0 Add-on first.') }
+    if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
+    Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
+    $p = Start-Process -FilePath $reshade -ArgumentList @('--headless','--api',$Api,$exe) -Wait -PassThru
+    if ($p.ExitCode -ne 0) { throw ("ReShade setup failed with exit code {0}" -f $p.ExitCode) }
+  }
+  Run-Install $Path $manifestPath
+}
 function Run-Restore {
   $items = Get-InstalledPackageManifest
   if ($items.Count -eq 0) { Write-Host (T 'Установок для отката не найдено.' 'No installations to restore.') -ForegroundColor Yellow; return }
@@ -260,22 +282,25 @@ function Main {
   if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
   if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Host (T 'ID источника из sources.lock.json' 'Source ID from sources.lock.json') }; Run-Download $SourceId; return }
+  if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $null; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
-  Write-Host (T '1. Проверить игру' '1. Check game')
-  Write-Host (T '2. Проверить packages и SHA-256' '2. Inventory packages and SHA-256')
-  Write-Host (T '3. Скачать зафиксированный пакет' '3. Download a locked package')
-  Write-Host (T '4. Установка проверенного пакета' '4. Install a verified package')
-  Write-Host (T '5. Восстановление последней установки' '5. Restore latest installation')
-  Write-Host (T '6. Язык' '6. Language')
+  Write-Host (T '1. Установка одним мастером' '1. One-click setup wizard')
+  Write-Host (T '2. Проверить игру' '2. Check game')
+  Write-Host (T '3. Проверить packages и SHA-256' '3. Inventory packages and SHA-256')
+  Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
+  Write-Host (T '5. Установка проверенного пакета' '5. Install a verified package')
+  Write-Host (T '6. Восстановление последней установки' '6. Restore latest installation')
+  Write-Host (T '7. Язык' '7. Language')
   switch (Read-Host (T 'Выберите действие' 'Choose action')) {
-    '1' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $p }
-    '2' { Run-Packages }
-    '3' { $s = if ($SourceId) { $SourceId } else { Read-Host (T 'ID источника' 'Source ID') }; Run-Download $s }
-    '4' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
-    '5' { Run-Restore }
-    '6' { Set-Language }
+    '1' { Run-Bootstrap $GamePath $Method $null }
+    '2' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $p }
+    '3' { Run-Packages }
+    '4' { $s = if ($SourceId) { $SourceId } else { Read-Host (T 'ID источника' 'Source ID') }; Run-Download $s }
+    '5' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
+    '6' { Run-Restore }
+    '7' { Set-Language }
     default { Write-Host (T 'Отмена.' 'Cancelled.') }
   }
 }

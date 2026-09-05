@@ -268,7 +268,7 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
-  Write-Host (T 'Установка завершена. Для отката используйте пункт Restore.' 'Installation completed. Use Restore to roll back.') -ForegroundColor Green
+  Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте Restore.' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
 }
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   if (-not $Path) { $Path = Read-Host (T 'Укажите папку игры' 'Enter game folder') }
@@ -298,7 +298,15 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
 function Run-Restore {
   $items = Get-InstalledPackageManifest
   if ($items.Count -eq 0) { Write-Host (T 'Установок для отката не найдено.' 'No installations to restore.') -ForegroundColor Yellow; return }
-  $selected = $items[0]
+  Write-Host ''; Write-Host (T 'Доступные установки для отката:' 'Installations available for restore:') -ForegroundColor Cyan
+  for ($i = 0; $i -lt $items.Count; $i++) {
+    $entry = Get-Content -LiteralPath $items[$i].FullName -Raw | ConvertFrom-Json
+    Write-Host ("{0}. {1} | {2} {3} | {4}" -f ($i + 1),$entry.gamePath,$entry.packageId,$entry.packageVersion,$items[$i].Name)
+  }
+  $choice = Read-Host (T 'Выберите номер установки' 'Choose an installation number')
+  $index = 0
+  if (-not [int]::TryParse($choice,[ref]$index) -or $index -lt 1 -or $index -gt $items.Count) { throw (T 'Некорректный номер установки.' 'Invalid installation number.') }
+  $selected = $items[$index - 1]
   $install = Get-Content -LiteralPath $selected.FullName -Raw | ConvertFrom-Json
   $game = [string]$install.gamePath
   $installRoot = if ($install.installRoot) { [string]$install.installRoot } else { $game }
@@ -327,12 +335,12 @@ function Main {
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
-  Write-Host (T '1. Установка одним мастером' '1. One-click setup wizard')
+  Write-Host (T '1. Автоматическая установка' '1. Automatic installation')
   Write-Host (T '2. Проверить игру' '2. Check game')
   Write-Host (T '3. Проверить packages и SHA-256' '3. Inventory packages and SHA-256')
   Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
-  Write-Host (T '5. Установка проверенного пакета' '5. Install a verified package')
-  Write-Host (T '6. Восстановление последней установки' '6. Restore latest installation')
+  Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
+  Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
   Write-Host (T '7. Язык' '7. Language')
   switch (Read-Host (T 'Выберите действие' 'Choose action')) {
     '1' { Run-Bootstrap $GamePath $Method $null }

@@ -10,7 +10,7 @@ Available command-line actions:
 
 - `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — inspect the game and write a JSON manifest;
 - `src\installer.ps1 -Action Packages` — list local archives/DLLs and their SHA-256 values;
-- `src\installer.ps1 -Action Download -SourceId "optiscaler"` — download only a locked HTTPS release after `allowAutomaticDownloads` is enabled and SHA-256 is verified;
+- `src\installer.ps1 -Action Download -SourceId "optiscaler"` — download only a locked HTTPS release with SHA-256 verification; the setting is enabled by default for locked sources;
 - `src\installer.ps1 -Action Bootstrap` — choose a game and method, download locked sources, verify SHA-256, prepare AIO assets, install ReShade when required, and install the selected package;
 - `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — verify, back up, and install the listed files;
 - `src\installer.ps1 -Action Restore` — choose an installation manifest and restore that game;
@@ -42,3 +42,4 @@ The interface mode can be changed from menu item 8. Simple mode shows a compact 
 Before installation, the tool scores executable candidates and filters common Unreal/Unity technical processes such as editor, crash reporter, shader compiler, subprocess, and server binaries. It still asks you to choose the target EXE when multiple candidates remain.
 
 The main menu keeps user preferences under **Settings**. This submenu contains language, interface mode, automatic-download policy, and the elevation warning toggle. The main menu has a separate **Exit** item.
+

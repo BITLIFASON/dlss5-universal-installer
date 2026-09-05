@@ -5,7 +5,7 @@
     "compareBeforeInstall": "Show a method comparison before installation",
     "warnBeforeElevation": "Show a warning before requesting administrator rights",
     "useLocalPackagesFirst": "Look for archives in packages first",
-    "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
+    "allowAutomaticDownloads": "Locked automatic downloads are enabled; every source still requires HTTPS and SHA-256",
     "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
   },
   "language": "en",

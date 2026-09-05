@@ -29,7 +29,7 @@ function Get-Settings {
       compareBeforeInstall = $true
       warnBeforeElevation = $true
       useLocalPackagesFirst = $true
-      allowAutomaticDownloads = $false
+      allowAutomaticDownloads = $true
       deleteUnknownFiles = $false
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
   }

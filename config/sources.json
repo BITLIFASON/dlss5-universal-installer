@@ -1,0 +1,20 @@
+{
+  "policy": "official_or_author_upstream_only",
+  "packages": [
+    {
+      "id": "reshade-addon",
+      "name": "ReShade Add-on Support",
+      "source": "https://reshade.me/",
+      "manual_download": true,
+      "sha256": null
+    },
+    {
+      "id": "dlss5-core",
+      "name": "DLSS 5 community core",
+      "source": "https://github.com/",
+      "manual_download": true,
+      "sha256": null,
+      "note": "Конкретный upstream release должен быть указан перед установкой; наличие публичного архива не подтверждает безопасность."
+    }
+  ]
+}

@@ -10,7 +10,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$ScriptPath = if ([IO.Path]::IsPathRooted($PSCommandPath)) { $PSCommandPath } else { (Resolve-Path -LiteralPath $PSCommandPath).Path }
+$Root = Split-Path -Parent (Split-Path -Parent $ScriptPath)
 $Dirs = @{
   Logs = Join-Path $Root 'logs'
   Backups = Join-Path $Root 'backups'
@@ -149,11 +150,30 @@ function Find-GameExecutables([string]$Path) {
   foreach ($item in $items) { Add-Member -InputObject $item -NotePropertyName candidateScore -NotePropertyValue (Get-ExecutableScore $item $Path) -Force }
   return @($items | Sort-Object candidateScore,Length -Descending | Select-Object -First 20)
 }
+function Get-ManagedInstalledPaths([string]$GamePath) {
+  $paths = @{}
+  foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
+    try {
+      $install = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
+      if ([string]$install.gamePath -ne $GamePath) { continue }
+      $root = if ($install.installRoot) { [string]$install.installRoot } else { [string]$install.gamePath }
+      foreach ($entry in @($install.files)) {
+        if ($entry.path) { $paths[(Join-Path $root ([string]$entry.path)).ToLowerInvariant()] = $true }
+      }
+    } catch { }
+  }
+  return $paths
+}
 function Get-GameInspection([string]$Path) {
   $resolved = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $files = @(Get-ChildItem -LiteralPath $resolved -File -Recurse -ErrorAction SilentlyContinue)
   $executables = @(Find-GameExecutables $resolved)
   $dlss = @($files | Where-Object { $_.Name -match '^(nvngx_dlss|nvngx_dlssg|nvngx_dlssnr|dlss).*\.dll' })
+  $managed = Get-ManagedInstalledPaths $resolved
+  $feederMarker = @($files | Where-Object { $_.Name -in @('dlss5-feed.addon64','renodx-dlss5.addon64') })
+  $managedDlss = @($dlss | Where-Object { $managed.ContainsKey($_.FullName.ToLowerInvariant()) -or ($feederMarker.Count -gt 0 -and $_.DirectoryName -eq $feederMarker[0].DirectoryName -and $_.Name -in @('nvngx_dlss.dll','nvngx_dlssnr.dll')) })
+  $managedDlssPaths = @($managedDlss | ForEach-Object { $_.FullName.ToLowerInvariant() })
+  $nativeDlss = @($dlss | Where-Object { $managedDlssPaths -notcontains $_.FullName.ToLowerInvariant() })
   $upscaler = @($files | Where-Object { $_.Name -match '(?i)^(ffx_fsr|amd_fidelityfx|libxess|xess|OptiScaler).*\.(dll|ini)$' })
   $proxy = @($files | Where-Object { $_.Name -match '^(dxgi|d3d11|d3d12|ReShade.*)\.dll' })
   $apiHint = Get-ApiHint $executables[0].FullName
@@ -168,8 +188,10 @@ function Get-GameInspection([string]$Path) {
     executables = @($executables | ForEach-Object { [ordered]@{ path = $_.FullName; size = $_.Length; architecture = Get-PeArchitecture $_.FullName; candidateScore = $_.candidateScore } })
     apiHint = $apiHint
     processRunning = Test-GameProcess $executables[0].FullName
-    nativeDlssDetected = ($dlss.Count -gt 0)
+    nativeDlssDetected = ($nativeDlss.Count -gt 0)
     dlssFiles = @($dlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
+    managedDlssFiles = @($managedDlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
+    nativeDlssFiles = @($nativeDlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     upscalerFiles = @($upscaler | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     proxyFiles = @($proxy | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     fileCount = $files.Count
@@ -625,8 +647,8 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath,[string]$Se
     $answer = Read-Input 'Установка может потребовать права администратора. Перезапустить с повышенными правами? (y/n)' 'Installation may require administrator rights. Relaunch elevated? (y/n)'
     if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
   }
-  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`" -ExecutablePath `"$SelectedExecutable`""
-  Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`" -ExecutablePath `"$SelectedExecutable`""
+  Start-Process -FilePath 'powershell.exe' -Verb RunAs -WorkingDirectory $Root -ArgumentList $args | Out-Null
   return $false
 }
 function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,[string]$Api) {
@@ -638,9 +660,9 @@ function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,
     $answer = Read-Input 'Автоматическая установка может потребовать права администратора. Перезапустить мастер с повышенными правами? (y/n)' 'Automatic installation may require administrator rights. Relaunch the wizard elevated? (y/n)'
     if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
   }
-  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Bootstrap -GamePath `"$InstallGamePath`" -Method $SelectedMethod"
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" -Action Bootstrap -GamePath `"$InstallGamePath`" -Method $SelectedMethod"
   if ($Api) { $args += " -Api `"$Api`"" }
-  Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
+  Start-Process -FilePath 'powershell.exe' -Verb RunAs -WorkingDirectory $Root -ArgumentList $args | Out-Null
   return $false
 }
 function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false) {

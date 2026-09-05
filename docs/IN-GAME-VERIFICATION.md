@@ -13,9 +13,14 @@ Use this short checklist after every installation.
 
 ## First launch
 
-1. Load the test save and wait about 30 seconds.
-2. Check the same view with the camera still and moving.
-3. Test a busy scene and a menu or save/load transition.
+1. Press `Home` to open the ReShade overlay. The key can differ if you changed the ReShade hotkey.
+2. Enable the active LumeniteFX technique selected during installation: `LUMENITE: Kernel 2.0` **or** `LUMENITE: QuantMotion`. Both shader files may be installed, but only one provider must be enabled.
+3. Enable `DLSS 5 Feed` and keep it **below** the selected LumeniteFX technique in the technique list. ReShade being loaded does not mean these techniques are enabled automatically.
+4. In the DLSS5/RenoDX panel, enable neural rendering if the selected consumer exposes a separate toggle. Do not enable another neural consumer or another motion-vector provider.
+5. Confirm the overlay reports the selected provider as enabled, then save/reload the preset if ReShade asks.
+6. Load the test save and wait about 30 seconds.
+7. Check the same view with the camera still and moving.
+8. Test a busy scene and a menu or save/load transition.
 
 ## Performance comparison
 
@@ -32,7 +37,7 @@ Generated FPS is not a replacement for native performance. A high displayed numb
 
 `Home` is the usual key for the ReShade overlay. Other keys depend on the preset or add-on. Do not enable several competing presets or injection methods at the same time.
 
-For **ReShade + Feeder**, enable `DLSS5_Feed` in the overlay and place it below the selected motion-vector provider. If it is missing, check `ReShade.log` and the shader paths before changing other game settings. If the game does not expose a usable depth/motion buffer, this method needs game-specific configuration.
+For **ReShade + Feeder**, the required activation order is: selected LumeniteFX provider first, then `DLSS 5 Feed`, then the neural-rendering toggle. If either technique is unchecked, the installation can appear to do nothing even though ReShade itself is working. If an effect is missing, check `ReShade.log` and the shader paths before changing other game settings. If the game does not expose a usable depth/motion buffer, this method needs game-specific configuration.
 
 ## Accept or roll back
 

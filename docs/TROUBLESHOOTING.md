@@ -42,3 +42,14 @@ Use **Advanced** interface mode, run `Check`, and keep the generated JSON inspec
 ## Last resort
 
 If the game remains unstable, restore the selected installation, remove only the local package downloads if needed, and report the exact method, executable path, package version, and relevant log error in a GitHub issue.
+
+## ReShade loads, but the image does not change
+
+If `Home` opens but no DLSS5 effect is visible, check `ReShade.log` for `DLSS5_Feed.fx is not loaded` or search-path error `123`. The shader folders must be searched directly:
+
+```ini
+EffectSearchPaths=.\reshade-shaders\Shaders\
+TextureSearchPaths=.\reshade-shaders\Textures\
+```
+
+The installer repairs these paths after its ReShade step. Restart the game, open `Home`, confirm that **DLSS 5 Feed** is listed, enable `DLSS5_Feed`, and save the preset. The effect must be below the selected motion-vector provider. An empty `ReShadePreset.ini` means that no effect is enabled yet; use `Home` once to select and save it.

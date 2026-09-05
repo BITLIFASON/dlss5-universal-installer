@@ -50,3 +50,4 @@
 - Unmanaged cleanup now creates a point snapshot that can restore the removed manual components; it explicitly warns that overwritten game DLL originals cannot be recovered.
 - Unmanaged cleanup now asks whether the installation belongs to this utility and redirects to Restore when a matching manifest exists.
 - Added manifest cleanup: check/package records are removed without another prompt, while install and cleanup records require confirmation.
+- Repaired ReShade shader and texture search paths after installation; documented the DLSS5_Feed activation order and game settings needed for repeatable verification.

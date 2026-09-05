@@ -474,6 +474,18 @@ function Get-ReShadeState([string]$InstallRoot) {
   }
   return [ordered]@{ installed=$false; path=$null; addonSupport=$false }
 }
+function Repair-ReShadeSearchPaths([string]$InstallRoot) {
+  $ini = Join-Path $InstallRoot 'ReShade.ini'
+  if (-not (Test-Path -LiteralPath $ini -PathType Leaf)) { return $false }
+  $text = [IO.File]::ReadAllText($ini)
+  $updated = $text
+  $updated = $updated -replace '(?m)^EffectSearchPaths=.*$', 'EffectSearchPaths=.\reshade-shaders\Shaders\'
+  $updated = $updated -replace '(?m)^TextureSearchPaths=.*$', 'TextureSearchPaths=.\reshade-shaders\Textures\'
+  if ($updated -eq $text) { return $false }
+  [IO.File]::WriteAllText($ini, $updated, (New-Object System.Text.UTF8Encoding($false)))
+  Write-Log ("RESHADE_PATHS_REPAIRED {0}" -f $ini)
+  return $true
+}
 function Remove-DetectedReShade([string]$InstallRoot,$State) {
   $knownAddons = @('dlss5-feed.addon64','dlss5-bridge.addon64','dlss5-dx11-bridge.addon64','renodx-dlss5.addon64','nvngx_dlssnr.dll')
   $targets = @($State.path,(Join-Path $InstallRoot 'ReShade.ini'),(Join-Path $InstallRoot 'ReShade.log'),(Join-Path $InstallRoot 'ReShadePreset.ini'))
@@ -549,6 +561,7 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
   if ($state.installed) { $arguments += @('--state','update') }
   $arguments += $Executable
   $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
+  Repair-ReShadeSearchPaths $InstallRoot | Out-Null
   $after = Get-FileSnapshot $InstallRoot
   $records = @()
   foreach ($relative in $after.Keys) {

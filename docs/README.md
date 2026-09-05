@@ -1,54 +1,54 @@
-# DLSS5 Universal Installer
+# DLSS5 Universal Installer guide
 
-Portable utility for Windows 10/11 x64. The first release targets DX11 and DX12 games. 32-bit games are supported only when the selected method provides a separate x86 or host component.
+This document covers the portable tool itself. The root [README](../README.md) is the short project overview; the linked guides below contain the detailed rules and procedures.
 
-Run `DLSS5-Universal.cmd`.
+## Start here
 
-The `Check` mode is read-only: it does not download, replace, or delete files. Before installation it reports the detected API, native DLSS files, and possible conflicts.
+Run `DLSS5-Universal.cmd` and choose **Automatic installation**. The wizard asks for a game folder, filters common technical executables, lets you select the real game EXE, compares the three methods, downloads pinned sources, verifies SHA-256, creates a point backup, and installs the selected package.
 
-Available command-line actions:
+Use `0` at any interactive prompt to cancel the current operation and return to the main menu. Use **Settings** to change language, interface mode, automatic-download policy, or the elevation warning. Use **Exit** to close the utility.
 
-- `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — inspect the game and write a JSON manifest;
-- `src\installer.ps1 -Action Packages` — list local archives/DLLs and their SHA-256 values;
-- `src\installer.ps1 -Action Download -SourceId "optiscaler"` — download only a locked HTTPS release with SHA-256 verification; the setting is enabled by default for locked sources;
-- `src\installer.ps1 -Action Bootstrap` — choose a game and method, download locked sources, verify SHA-256, prepare AIO assets, install ReShade when required, and install the selected package;
-- `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — verify, back up, and install the listed files;
-- `src\installer.ps1 -Action Restore` — choose an installation manifest and restore that game;
+## Read-only inspection
 
-Sources are pinned in `config/sources.lock.json`. `latest` URLs, search links, and entries without SHA-256 are rejected.
+`Check` does not download, replace, or delete files. It reports executable candidates, PE architecture, API hints, native DLSS filenames, and common proxy DLLs. Simple mode shows a compact summary; Advanced mode prints the complete JSON inspection report.
 
-Profiles:
+## Command-line actions
 
-- Native/Bridge — for games with native DLSS;
-- OptiScaler — a separate upscaler interceptor;
-- ReShade + Feeder — a route for games without native DLSS.
+```powershell
+src\installer.ps1 -Action Check -GamePath "C:\Games\MyGame"
+src\installer.ps1 -Action Packages
+src\installer.ps1 -Action Download -SourceId "optiscaler"
+src\installer.ps1 -Action Bootstrap
+src\installer.ps1 -Action Install -GamePath "C:\Games\MyGame" -PackageManifest "packages\method.manifest.json"
+src\installer.ps1 -Action Restore
+```
 
-Only the specific files being changed are backed up. A full game copy is never created.
+`Download` retrieves one locked source. `Bootstrap` performs the complete automatic flow. `Install` works with a package manifest, including a custom version. `Restore` lists previous installation manifests and lets you choose which game to revert.
 
-### Custom versions and packages
+## Profiles
 
-The automatic Bootstrap flow uses only the pinned versions in `config/sources.lock.json`. To install another version or an unlisted package, place the archive in `packages/` and create a package manifest that records its exact source, archive SHA-256, and every destination file SHA-256. Then choose **Install a custom local package** in the menu or run `-Action Install` with that manifest. The installer verifies the manifest and creates a point backup before changing the game; it does not download arbitrary URLs automatically.
+- **Native/Bridge** — for games with native DLSS;
+- **OptiScaler** — for a supported upscaler proxy path;
+- **ReShade + Feeder** — for games without native DLSS when depth and motion data are available.
 
-Shared settings are in `config/settings.json`: language, supported APIs, mandatory method comparison, elevation warning, local package preference, and the rule against deleting unknown files.
+The methods are alternatives. Restore the selected installation before switching methods.
 
-Additional public guides:
+## Custom packages
 
+Place a custom archive in `packages/` and create a manifest with its exact source, archive SHA-256, and SHA-256 for each destination file. The installer will verify the manifest and create a point backup before copying files. It does not download arbitrary URLs automatically or remove files absent from the manifest.
+
+## Settings and local data
+
+Tracked defaults are stored in `config/settings.json`. Personal changes are written to the ignored `config/settings.local.json`; delete that file to return to the repository defaults.
+
+Runtime downloads, staging files, backups, generated manifests, logs, and personal test plans are ignored by Git. The installer never creates a full game backup.
+
+## Public guides
+
+- [Components and sources](COMPONENTS.md) — pinned versions, official upstream releases, and file groups;
 - [Compatibility matrix](COMPATIBILITY.md) — supported APIs, methods, and current boundaries;
-- [Troubleshooting](TROUBLESHOOTING.md) — recovery steps and diagnostic collection.
-
-At any interactive prompt, enter 0 to cancel the current operation and return to the main menu. The command-line actions remain non-interactive when all required parameters are supplied.
-
-
-
-In the menu, choose **8 — Exit** to close the utility. For any game-folder prompt, enter 1 to open the standard Windows folder picker, or enter the path manually.
-
-The interface mode can be changed from menu item 8. Simple mode shows a compact inspection summary; Advanced mode prints the complete JSON inspection report. Menu item 9 exits the utility.
-
-Before installation, the tool scores executable candidates and filters common Unreal/Unity technical processes such as editor, crash reporter, shader compiler, subprocess, and server binaries. It still asks you to choose the target EXE when multiple candidates remain.
-
-The main menu keeps user preferences under **Settings**. This submenu contains language, interface mode, automatic-download policy, and the elevation warning toggle. The main menu has a separate **Exit** item.
-
-
-Personal preferences are stored in the ignored `config/settings.local.json` file. The tracked `config/settings.json` remains the English default template, so changing options from the Settings menu does not create a Git diff. Delete the local file to return to repository defaults.
-
-
+- [Troubleshooting](TROUBLESHOOTING.md) — recovery steps and diagnostic collection;
+- [Package manifest](PACKAGE-MANIFEST.md) — manifest format for custom packages;
+- [Safety](SAFETY.md) — download, backup, elevation, and anti-cheat boundaries;
+- [Testing](TESTING.md) — generic validation procedure;
+- [Implementation plan](PLAN.md) — current project scope and completed work.

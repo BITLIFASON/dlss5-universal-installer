@@ -32,3 +32,4 @@
 - Added compatibility and troubleshooting guides covering supported APIs, method selection, recovery, and diagnostics.
 - Added the documentation index to the root README and fixed guide links in docs/README.md.
 - Reworked the root README with a visual quick-start layout, table of contents, Mermaid workflow, compatibility summary, requirements, troubleshooting, and contribution guidance.
+- Cleaned and condensed docs/README.md, removed stale menu references, and separated overview content from detailed guides.

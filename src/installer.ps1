@@ -486,6 +486,17 @@ function Repair-ReShadeSearchPaths([string]$InstallRoot) {
   Write-Log ("RESHADE_PATHS_REPAIRED {0}" -f $ini)
   return $true
 }
+function Test-FeederMotionProvider([string]$InstallRoot) {
+  $shaderRoot = Join-Path $InstallRoot 'reshade-shaders\Shaders'
+  $names = @('lumenite_Kernel.fx','lumenite_QuantMotion.fx','vort_Motion.fx','MartysMods_LAUNCHPAD.fx','dh_uber_motion.fx','ReshadeMotionEstimation.fx')
+  $found = @($names | Where-Object { Test-Path -LiteralPath (Join-Path $shaderRoot $_) -PathType Leaf })
+  if ($found.Count -eq 0) {
+    Write-Host (T 'Предупреждение: motion-vector provider не найден. DLSS5_Feed может загрузиться, но не сможет получить корректные векторы движения. Установите совместимый provider и включите его выше DLSS5_Feed.' 'Warning: no motion-vector provider was found. DLSS5_Feed may load but cannot receive valid motion vectors. Install a compatible provider and enable it above DLSS5_Feed.') -ForegroundColor Yellow
+    return $false
+  }
+  Write-Log ("FEEDER_MOTION_PROVIDER {0}" -f ($found -join ','))
+  return $true
+}
 function Remove-DetectedReShade([string]$InstallRoot,$State) {
   $knownAddons = @('dlss5-feed.addon64','dlss5-bridge.addon64','dlss5-dx11-bridge.addon64','renodx-dlss5.addon64','nvngx_dlssnr.dll')
   $targets = @($State.path,(Join-Path $InstallRoot 'ReShade.ini'),(Join-Path $InstallRoot 'ReShade.log'),(Join-Path $InstallRoot 'ReShadePreset.ini'))
@@ -671,6 +682,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
+  if ($manifest.method -eq 'Feeder') { Test-FeederMotionProvider $installRoot | Out-Null }
   Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте «Восстановление».' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
   Save-GameProfile $info $ExecutablePath $manifest $info.apiHint
   Offer-Launch $ExecutablePath

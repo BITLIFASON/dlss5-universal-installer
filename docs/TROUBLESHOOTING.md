@@ -53,3 +53,5 @@ TextureSearchPaths=.\reshade-shaders\Textures\
 ```
 
 The installer repairs these paths after its ReShade step. Restart the game, open `Home`, confirm that **DLSS 5 Feed** is listed, enable `DLSS5_Feed`, and save the preset. The effect must be below the selected motion-vector provider. An empty `ReShadePreset.ini` means that no effect is enabled yet; use `Home` once to select and save it.
+
+A successful ReShade injection alone is not enough. Feeder also needs one motion-vector provider, such as LumeniteFX, VORT, Launchpad, or another compatible provider. The installer now warns when none is present; do not treat the installation as working until the provider is installed, enabled above `DLSS5_Feed`, and visible in the same preset.

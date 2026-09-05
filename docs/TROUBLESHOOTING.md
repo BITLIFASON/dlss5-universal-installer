@@ -56,6 +56,8 @@ The installer repairs these paths after its ReShade step. Restart the game, open
 
 A successful ReShade injection alone is not enough. Feeder also needs one motion-vector provider. The automatic Feeder profile installs the pinned LumeniteFX Kernel and creates a preset with `Lumenite_Kernel` above `DLSS5_Feed`. Do not treat the installation as working until both techniques are enabled and the log reports non-zero motion vectors.
 
+The installer offers only two LumeniteFX providers: **Kernel** (`DLSS5_MV_PROVIDER=3`) and **QuantMotion** (`DLSS5_MV_PROVIDER=4`). Enable the selected Lumenite technique above `DLSS5_Feed`; do not enable both at once.
+
 ## Grey walls look soft or smear while the camera moves
 
 This usually means that motion vectors are empty or disagree with the depth buffer on a flat surface. Confirm that the Feeder preset has these safeguards enabled:

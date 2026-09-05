@@ -5,6 +5,7 @@ param(
   [string]$PackageManifest,
   [string]$SourceId,
   [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method,
+  [ValidateSet('Kernel','QuantMotion')][string]$LumeniteProvider = 'Kernel',
   [string]$ExecutablePath,
   [string]$Api
 )
@@ -353,7 +354,11 @@ function Ensure-LockedDownload([string]$Id) {
   if ((Get-Sha256 $path) -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $path -Force; throw ("SHA-256 mismatch for source: {0}" -f $Id) }
   return $path
 }
-function Prepare-SourcePackage($Manifest) {
+function Get-LumeniteProviderConfig([string]$Provider = 'Kernel') {
+  if ($Provider -eq 'QuantMotion') { return [ordered]@{ name='QuantMotion'; code=4; technique='lumenite_QuantMotion@lumenite_QuantMotion.fx' } }
+  return [ordered]@{ name='Kernel'; code=3; technique='Lumenite_Kernel@lumenite_Kernel.fx' }
+}
+function Prepare-SourcePackage($Manifest,[string]$Provider = 'Kernel') {
   if ($Manifest.sourcePackage -eq 'dlss5-bridge') { Ensure-LockedDownload 'dlss5-bridge' | Split-Path -Parent; return $Dirs.Downloads }
   if ($Manifest.sourcePackage -eq 'dlss5-aio') {
     $seven = Ensure-LockedDownload '7zr-26.03'
@@ -368,10 +373,20 @@ function Prepare-SourcePackage($Manifest) {
       if ($LASTEXITCODE -ne 0) { throw 'DLSS5-AIO extraction failed.' }
     }
     if ($Manifest.sourcePackages -contains 'lumenitefx') {
+      if ($Manifest.sourcePackages -contains 'dlss5-feeder-upstream') {
+        $feederArchive = Ensure-LockedDownload 'dlss5-feeder-v0.13.1-beta.1'
+        $feederOut = Join-Path $out 'dlss5-feeder-upstream'
+        if (-not (Test-Path -LiteralPath $feederOut -PathType Container)) { Expand-Package $feederArchive $feederOut }
+        $newAddon = Get-ChildItem -LiteralPath $feederOut -File -Recurse -Filter 'dlss5-feed.addon64' | Select-Object -First 1
+        $newShader = Get-ChildItem -LiteralPath $feederOut -File -Recurse -Filter 'DLSS5_Feed.fx' | Select-Object -First 1
+        if ($null -eq $newAddon -or $null -eq $newShader) { throw 'Pinned DLSS5-Feeder archive is missing the x64 add-on or shader.' }
+        Copy-Item -LiteralPath $newAddon.FullName -Destination (Join-Path $root '04-DLSS5-Feeder\dlss5-feed.addon64') -Force
+        Copy-Item -LiteralPath $newShader.FullName -Destination (Join-Path $root '04-DLSS5-Feeder\DLSS5_Feed.fx') -Force
+      }
       $lumeniteArchive = Ensure-LockedDownload 'lumenitefx-mainline-76fa3e4d'
       $lumeniteOut = Join-Path $out 'lumenitefx-source'
       if (-not (Test-Path -LiteralPath $lumeniteOut -PathType Container)) { Expand-Package $lumeniteArchive $lumeniteOut }
-      foreach ($relative in @('Shaders\lumenite_Kernel.fx','Shaders\include\lumenite_ColorManagement.fxh','Shaders\include\lumenite_Compute.fxh','Shaders\include\lumenite_Helpers.fxh','Shaders\include\lumenite_Projections.fxh','Textures\lumenite_bluenoise256.png')) {
+      foreach ($relative in @('Shaders\lumenite_Kernel.fx','Shaders\lumenite_QuantMotion.fx','Shaders\include\lumenite_ColorManagement.fxh','Shaders\include\lumenite_Compute.fxh','Shaders\include\lumenite_Helpers.fxh','Shaders\include\lumenite_Projections.fxh','Textures\lumenite_bluenoise256.png')) {
         $source = Get-ChildItem -LiteralPath $lumeniteOut -File -Recurse -Filter ([IO.Path]::GetFileName($relative)) -ErrorAction SilentlyContinue | Select-Object -First 1
         $destination = Join-Path $root ('lumenitefx\' + $relative)
         if ($null -eq $source) { throw ("LumeniteFX archive is missing: {0}" -f $relative) }
@@ -380,7 +395,8 @@ function Prepare-SourcePackage($Manifest) {
       }
       $preset = Join-Path $root 'installer-generated\ReShadePreset.ini'
       New-Item -ItemType Directory -Force -Path (Split-Path $preset) | Out-Null
-      $presetText = "[GENERAL]`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`nTechniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`nTechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx`r`n`r`n[DLSS5_Feed.fx]`r`nGEOM_ENABLE=0`r`nVALIDATE_LUMA=1`r`nVALIDATE_DEPTH=1`r`nVALIDATE_MV=1`r`nVALIDATE_STATIC=1`r`nSTATIC_MIN_CONTRAST=0.02`r`nMV_LOWRES_FILTER=0`r`n"
+      $providerConfig = Get-LumeniteProviderConfig $Provider
+      $presetText = "[GENERAL]`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=$($providerConfig.code)`r`nTechniques=$($providerConfig.technique),DLSS5_Feed@DLSS5_Feed.fx`r`nTechniqueSorting=$($providerConfig.technique),DLSS5_Feed@DLSS5_Feed.fx`r`n`r`n[DLSS5_Feed.fx]`r`nGEOM_ENABLE=0`r`nVALIDATE_LUMA=1`r`nVALIDATE_DEPTH=1`r`nVALIDATE_MV=1`r`nVALIDATE_STATIC=1`r`nSTATIC_HYSTERESIS=1`r`nSTATIC_MIN_CONTRAST=0.02`r`nMV_LOWRES_FILTER=0`r`n"
       [IO.File]::WriteAllText($preset, $presetText, (New-Object System.Text.UTF8Encoding($false)))
     }
     return $root
@@ -534,16 +550,19 @@ function Get-ReShadeState([string]$InstallRoot) {
   }
   return [ordered]@{ installed=$false; path=$null; addonSupport=$false }
 }
-function Repair-ReShadeSearchPaths([string]$InstallRoot,[bool]$Feeder = $false) {
+function Repair-ReShadeSearchPaths([string]$InstallRoot,[bool]$Feeder = $false,[string]$Provider = 'Kernel') {
   $ini = Join-Path $InstallRoot 'ReShade.ini'
   if (-not (Test-Path -LiteralPath $ini -PathType Leaf)) { return $false }
   $text = [IO.File]::ReadAllText($ini)
   $updated = $text
   $updated = $updated -replace '(?m)^EffectSearchPaths=.*$', 'EffectSearchPaths=.\reshade-shaders\Shaders\'
   $updated = $updated -replace '(?m)^TextureSearchPaths=.*$', 'TextureSearchPaths=.\reshade-shaders\Textures\'
-  if ($Feeder -and $updated -notmatch '(?m)^PreprocessorDefinitions=.*DLSS5_MV_PROVIDER=3') {
-    if ($updated -match '(?m)^PreprocessorDefinitions=(.*)$') { $updated = $updated -replace '(?m)^PreprocessorDefinitions=(.*)$', 'PreprocessorDefinitions=$1,DLSS5_MV_PROVIDER=3' }
-    else { $updated += "`r`nPreprocessorDefinitions=DLSS5_MV_PROVIDER=3`r`n" }
+  if ($Feeder) {
+    $providerConfig = Get-LumeniteProviderConfig $Provider
+    $providerDefinition = "DLSS5_MV_PROVIDER=$($providerConfig.code)"
+    if ($updated -match '(?m)^PreprocessorDefinitions=.*DLSS5_MV_PROVIDER=\d+') { $updated = $updated -replace '(?m)^PreprocessorDefinitions=(.*)DLSS5_MV_PROVIDER=\d+(.*)$', "PreprocessorDefinitions=`$1$providerDefinition`$2" }
+    elseif ($updated -match '(?m)^PreprocessorDefinitions=(.*)$') { $updated = $updated -replace '(?m)^PreprocessorDefinitions=(.*)$', "PreprocessorDefinitions=`$1,$providerDefinition" }
+    else { $updated += "`r`nPreprocessorDefinitions=$providerDefinition`r`n" }
   }
   if ($Feeder) {
     $presetPath = (Join-Path $InstallRoot 'ReShadePreset.ini').Replace('\','/')
@@ -597,7 +616,7 @@ function Remove-DetectedReShade([string]$InstallRoot,$State) {
   Write-Log ("UNTRACKED_CLEANUP {0}; manifest={1}" -f $InstallRoot,$manifestPath)
   Write-Host (T 'Компоненты удалены. Точечная копия сохранена; Restore вернёт ручную установку, но не оригинальные файлы игры.' 'Components removed. A point snapshot was saved; Restore will bring back the manual installation, not the original game files.') -ForegroundColor Yellow
 }
-function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot,[bool]$Feeder = $false) {
+function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot,[bool]$Feeder = $false,[string]$Provider = 'Kernel') {
   $state = Get-ReShadeState $InstallRoot
   $forceReinstall = $false
   if ($state.installed) {
@@ -645,7 +664,7 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
   if ($state.installed) { $arguments += @('--state','update') }
   $arguments += $Executable
   $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
-  Repair-ReShadeSearchPaths $InstallRoot $Feeder | Out-Null
+  Repair-ReShadeSearchPaths $InstallRoot $Feeder $Provider | Out-Null
   $after = Get-FileSnapshot $InstallRoot
   $records = @()
   foreach ($relative in $after.Keys) {
@@ -681,7 +700,7 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath,[string]$Se
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -WorkingDirectory $Root -ArgumentList $args | Out-Null
   return $false
 }
-function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,[string]$Api) {
+function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,[string]$Api,[string]$Provider = 'Kernel') {
   $probe = Join-Path $InstallGamePath ('.dlss5-bootstrap-write-test-' + [guid]::NewGuid().ToString('N'))
   try { New-Item -ItemType File -Path $probe -Force | Out-Null; Remove-Item -LiteralPath $probe -Force; return $true } catch { }
   $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -690,12 +709,12 @@ function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,
     $answer = Read-Input 'Автоматическая установка может потребовать права администратора. Перезапустить мастер с повышенными правами? (y/n)' 'Automatic installation may require administrator rights. Relaunch the wizard elevated? (y/n)'
     if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
   }
-  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" -Action Bootstrap -GamePath `"$InstallGamePath`" -Method $SelectedMethod"
+  $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" -Action Bootstrap -GamePath `"$InstallGamePath`" -Method $SelectedMethod -LumeniteProvider $Provider"
   if ($Api) { $args += " -Api `"$Api`"" }
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -WorkingDirectory $Root -ArgumentList $args | Out-Null
   return $false
 }
-function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false) {
+function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false,[string]$Provider = 'Kernel') {
   if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $info = Get-GameInspection $game
@@ -713,7 +732,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
   $sourceRoot = $stage
-  if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest }
+  if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest $Provider }
   else { Expand-Package $manifest._archivePath $stage }
   $backupRoot = if ($PreBackupRoot) { $PreBackupRoot } else { Join-Path $Dirs.Backups $stamp }
   $records = New-Object 'System.Collections.Generic.List[object]'
@@ -726,7 +745,9 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
     $sourceRelative = if ($entry.sourcePath) { ([string]$entry.sourcePath).Replace('/','\') } else { $relative }
     $source = Join-Path $sourceRoot $sourceRelative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
-    if ((Get-Sha256 $source) -ne ([string]$entry.sha256).ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
+    $expectedSha = [string]$entry.sha256
+    if ($manifest.method -eq 'Feeder' -and $relative -eq 'ReShadePreset.ini' -and $manifest.providerPresetSha256) { $expectedSha = [string]$manifest.providerPresetSha256.$Provider }
+    if ([string]::IsNullOrWhiteSpace($expectedSha) -or (Get-Sha256 $source) -ne $expectedSha.ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
     $destination = Join-Path $installRoot $relative
     if ($recordByPath.ContainsKey($relative)) {
       $record = $recordByPath[$relative]
@@ -754,7 +775,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
     throw
   }
   $records = @($records | ForEach-Object { Normalize-InstallRecord $_ })
-  $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
+  $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; provider=if($manifest.method -eq 'Feeder'){$Provider}else{$null}; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
   if ($manifest.method -eq 'Feeder') { Test-FeederMotionProvider $installRoot | Out-Null }
@@ -762,7 +783,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   Save-GameProfile $info $ExecutablePath $manifest $info.apiHint
   Offer-Launch $ExecutablePath
 }
-function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
+function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[string]$Provider = 'Kernel') {
   if (-not $Path) { $Path = Read-GamePath }
   $info = Get-GameInspection $Path
   if (-not $SelectedMethod) {
@@ -770,12 +791,19 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Input 'Метод (1-3)' 'Method (1-3)') - 1]
   }
   if (-not (Confirm-MethodCompatibility $info $SelectedMethod)) { return }
+  if ($SelectedMethod -eq 'Feeder') {
+    Write-Host (T 'Провайдер motion vectors (только LumeniteFX):' 'Motion-vector provider (LumeniteFX only):') -ForegroundColor Cyan
+    Write-Host (T '1. Kernel — рекомендуемый базовый вариант' '1. Kernel — recommended baseline')
+    Write-Host (T '2. QuantMotion — альтернативный estimator для сравнения' '2. QuantMotion — alternative estimator for comparison')
+    $providerChoice = Read-Input 'Вариант LumeniteFX (1-2)' 'LumeniteFX variant (1-2)'
+    if ($providerChoice -eq '2') { $Provider = 'QuantMotion' } elseif ($providerChoice -eq '1') { $Provider = 'Kernel' } else { throw (T 'Некорректный вариант LumeniteFX.' 'Invalid LumeniteFX variant.') }
+  }
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }
   $exe = Select-Executable $info
   if ((Read-Input ("Установить метод {0} в выбранный EXE? (y/n)" -f $SelectedMethod) ("Install method {0} into the selected EXE? (y/n)" -f $SelectedMethod)) -notmatch '^(y|yes|д|да)$') { return }
-  if (-not (Ensure-AdminBootstrap $Path $SelectedMethod $Api)) { return }
+  if (-not (Ensure-AdminBootstrap $Path $SelectedMethod $Api $Provider)) { return }
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $backupRoot = Join-Path $Dirs.Backups $stamp
   $preRecords = @()
@@ -788,9 +816,9 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     $reshade = Ensure-LockedDownload 'reshade-full-addons'
     if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
     Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
-    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot ($SelectedMethod -eq 'Feeder')
+    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot ($SelectedMethod -eq 'Feeder') $Provider
   }
-  Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true
+  Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true $Provider
 }
 function Run-Restore {
   $items = Get-InstalledPackageManifest
@@ -905,7 +933,7 @@ function Invoke-Menu {
     Write-Host (T '8. Очистить манифесты' '8. Clean generated manifests')
     Write-Host (T '9. Выход' '9. Exit')
     switch (Read-Input 'Выберите действие' 'Choose action') {
-      '1' { Run-Bootstrap $GamePath $Method $null }
+      '1' { Run-Bootstrap $GamePath $Method $null $LumeniteProvider }
       '2' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Check $p }
       '3' { Run-Packages }
       '4' { $s = if ($SourceId) { $SourceId } else { Read-Input 'ID источника' 'Source ID' }; Run-Download $s }
@@ -930,8 +958,8 @@ function Main {
   if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-GamePath }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
   if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Input 'ID источника из sources.lock.json' 'Source ID from sources.lock.json' }; Run-Download $SourceId; return }
-  if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $Api; return }
-  if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest $ExecutablePath; return }
+  if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $Api $LumeniteProvider; return }
+  if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest $ExecutablePath @() $null $null $false $LumeniteProvider; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
   if ($Action -eq 'CleanManifests') { Run-CleanManifests; return }
   while (Invoke-Menu) { }

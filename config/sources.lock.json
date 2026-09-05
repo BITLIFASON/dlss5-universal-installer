@@ -83,13 +83,21 @@
       "license": "Public domain",
       "sourceType": "official-upstream"
     },
-    {
-      "id": "lumenitefx-mainline-76fa3e4d",
+  {
+    "id": "lumenitefx-mainline-76fa3e4d",
       "version": "mainline@76fa3e4d601c97e9bc63f119c01405b7b9938885",
       "downloadUrl": "https://github.com/umar-afzaal/LumeniteFX/archive/76fa3e4d601c97e9bc63f119c01405b7b9938885.zip",
       "sha256": "bf574543a6af6527587af0bad139922e8c0363bb154cdfb3e41133c7dca2ee3f",
       "license": "see upstream LICENSE.md and NOTICE",
-      "sourceType": "author-upstream"
-    }
-  ]
+    "sourceType": "author-upstream"
+  },
+  {
+    "id": "dlss5-feeder-v0.13.1-beta.1",
+    "version": "0.13.1-beta.1",
+    "downloadUrl": "https://github.com/jlrouzies-fr/DLSS5-Feeder/releases/download/v0.13.1-beta.1/DLSS5-Feeder-0.13.1-beta.1.zip",
+    "sha256": "8da626ed906a29289f001cb613640015360e36b0c3478348bf097a304b34bb18",
+    "license": "see upstream repository",
+    "sourceType": "author-upstream"
+  }
+]
 }

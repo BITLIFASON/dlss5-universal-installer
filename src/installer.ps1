@@ -128,6 +128,38 @@ function Get-SourceLock {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw (T 'Файл sources.lock.json не найден.' 'sources.lock.json was not found.') }
   Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 }
+function Ensure-LockedDownload([string]$Id) {
+  $lock = Get-SourceLock
+  $source = @($lock.sources | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
+  if ($null -eq $source) { throw ("Unknown locked source: {0}" -f $Id) }
+  $name = [IO.Path]::GetFileName(([Uri]$source.url).AbsolutePath)
+  $path = Join-Path $Dirs.Downloads $name
+  if (Test-Path -LiteralPath $path -PathType Leaf) {
+    if ((Get-Sha256 $path) -eq ([string]$source.sha256).ToLowerInvariant()) { return $path }
+    Remove-Item -LiteralPath $path -Force
+  }
+  Invoke-WebRequest -Uri $source.url -OutFile $path -UseBasicParsing
+  if ((Get-Sha256 $path) -ne ([string]$source.sha256).ToLowerInvariant()) { Remove-Item -LiteralPath $path -Force; throw ("SHA-256 mismatch for source: {0}" -f $Id) }
+  return $path
+}
+function Prepare-SourcePackage($Manifest) {
+  if ($Manifest.sourcePackage -eq 'dlss5-bridge') { Ensure-LockedDownload 'dlss5-bridge' | Split-Path -Parent; return $Dirs.Downloads }
+  if ($Manifest.sourcePackage -eq 'dlss5-aio') {
+    $seven = Ensure-LockedDownload '7zr-26.03'
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part2' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part3' | Out-Null
+    $out = Join-Path $Dirs.Staging ('bootstrap-aio-' + $Manifest.version)
+    $root = Join-Path $out 'DLSS5-AIO'
+    if (-not (Test-Path -LiteralPath $root -PathType Container)) {
+      New-Item -ItemType Directory -Force -Path $out | Out-Null
+      & $seven x (Join-Path $Dirs.Downloads 'DLSS5-AIO-v1.2.5.7z.001') "-o$out" -y | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw 'DLSS5-AIO extraction failed.' }
+    }
+    return $root
+  }
+  return $null
+}
 function Run-Download([string]$Id) {
   if (-not $Settings.allowAutomaticDownloads) { throw (T 'Автоскачивание отключено в config/settings.json. Сначала явно включите allowAutomaticDownloads.' 'Automatic downloads are disabled in config/settings.json. Explicitly enable allowAutomaticDownloads first.') }
   $lock = Get-SourceLock
@@ -153,18 +185,21 @@ function Test-SafeRelativePath([string]$Path) {
 function Get-PackageManifest([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw (T 'Manifest пакета не найден.' 'Package manifest was not found.') }
   $manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-  foreach ($required in @('id','version','method','archive','sha256','source','files')) {
+  foreach ($required in @('id','version','method','source','files')) {
     if ($null -eq $manifest.$required) { throw ("Package manifest is missing: {0}" -f $required) }
   }
   if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'Неизвестный метод в manifest.' 'Unknown method in package manifest.') }
-  $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
-  if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в packages.' 'Package archive is missing from packages.') }
-  if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с manifest.' 'Archive SHA-256 does not match the manifest.') }
+  if (-not $manifest.sourcePackage) {
+    if ($null -eq $manifest.archive -or $null -eq $manifest.sha256) { throw (T 'В manifest отсутствуют archive или sha256.' 'Manifest is missing archive or sha256.') }
+    $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
+    if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw (T 'Архив пакета отсутствует в packages.' 'Package archive is missing from packages.') }
+    if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с manifest.' 'Archive SHA-256 does not match the manifest.') }
+    $manifest | Add-Member -NotePropertyName _archivePath -NotePropertyValue $archive -Force
+  }
   foreach ($entry in @($manifest.files)) {
     if (-not (Test-SafeRelativePath ([string]$entry.path)) -or [string]::IsNullOrWhiteSpace([string]$entry.sha256)) { throw (T 'Некорректный список файлов manifest.' 'Invalid file list in package manifest.') }
     if ($entry.sourcePath -and -not (Test-SafeRelativePath ([string]$entry.sourcePath))) { throw (T 'Некорректный sourcePath manifest.' 'Invalid sourcePath in package manifest.') }
   }
-  $manifest | Add-Member -NotePropertyName _archivePath -NotePropertyValue $archive -Force
   return $manifest
 }
 function Expand-Package([string]$Archive,[string]$Destination) {
@@ -209,13 +244,15 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
-  Expand-Package $manifest._archivePath $stage
+  $sourceRoot = $stage
+  if ($manifest.sourcePackage) { $sourceRoot = Prepare-SourcePackage $manifest }
+  else { Expand-Package $manifest._archivePath $stage }
   $backupRoot = Join-Path $Dirs.Backups $stamp
   $records = @()
   foreach ($entry in @($manifest.files)) {
     $relative = ([string]$entry.path).Replace('/','\')
     $sourceRelative = if ($entry.sourcePath) { ([string]$entry.sourcePath).Replace('/','\') } else { $relative }
-    $source = Join-Path $stage $sourceRelative
+    $source = Join-Path $sourceRoot $sourceRelative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
     if ((Get-Sha256 $source) -ne ([string]$entry.sha256).ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
     $destination = Join-Path $installRoot $relative
@@ -244,9 +281,13 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный manifest метода не найден.' 'Prepared method manifest was not found.') }
   $exe = $info.primaryExecutable
+  if ($SelectedMethod -eq 'OptiScaler') {
+    $archive = Ensure-LockedDownload 'optiscaler'
+    Copy-Item -LiteralPath $archive -Destination (Join-Path $Dirs.Packages (Split-Path $archive -Leaf)) -Force
+  } elseif ($SelectedMethod -eq 'NativeBridge') { Ensure-LockedDownload 'dlss5-bridge' | Out-Null }
+  elseif ($SelectedMethod -eq 'Feeder') { Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null }
   if ($SelectedMethod -in @('NativeBridge','Feeder')) {
-    $reshade = Join-Path $Dirs.Downloads 'ReShade_Setup_6.8.0_Addon.exe'
-    if (-not (Test-Path -LiteralPath $reshade)) { throw (T 'Сначала скачайте ReShade 6.8.0 Add-on.' 'Download ReShade 6.8.0 Add-on first.') }
+    $reshade = Ensure-LockedDownload 'reshade-full-addons'
     if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
     Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
     $p = Start-Process -FilePath $reshade -ArgumentList @('--headless','--api',$Api,$exe) -Wait -PassThru

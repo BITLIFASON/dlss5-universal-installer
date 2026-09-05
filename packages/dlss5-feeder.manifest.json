@@ -2,130 +2,129 @@
   "id": "dlss5-feeder",
   "version": "1.2.5",
   "method": "Feeder",
-  "archive": "dlss5-feeder-v1.2.5.zip",
   "installRelativeTo": "primaryExecutableDirectory",
+  "sourcePackage": "dlss5-aio",
   "source": "https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5",
-  "sha256": "1ae6ce3e1f8a979ae95d9f960db0cc7a8dc35271274ff9c4fa96c3a051eca018",
   "files": [
     {
       "path": "dlss5-feed.addon64",
-      "sourcePath": "dlss5-feed.addon64",
+      "sourcePath": "04-DLSS5-Feeder/dlss5-feed.addon64",
       "sha256": "02d60691bf5c48ceb2bd93ac6b519e2d20fdc2df5c8b1ecec0622a842f9071b8"
     },
     {
-      "path": "nvngx_dlss.dll",
-      "sourcePath": "nvngx_dlss.dll",
-      "sha256": "d202b024cf5a809d4f6cb57b698ca61cdf7e7f664915a3794942042066d7cf72"
-    },
-    {
-      "path": "nvngx_dlssnr.dll",
-      "sourcePath": "nvngx_dlssnr.dll",
-      "sha256": "dcc0dc2414aedec4a8e084647070383be068554042587180c20c784d4772d36f"
+      "path": "reshade-shaders\\Shaders\\DLSS5_Feed.fx",
+      "sourcePath": "04-DLSS5-Feeder/DLSS5_Feed.fx",
+      "sha256": "2233d2f04220e4b71832ed6a0a980f0646ac79966f064b10a0566b209fc44b72"
     },
     {
       "path": "renodx-dlss5.addon64",
-      "sourcePath": "renodx-dlss5.addon64",
+      "sourcePath": "02-DLSS5-Neural-Rendering/renodx-dlss5.addon64",
       "sha256": "87aef9ddd937c7241e6bf8d8efea0045d63559135e254c60dab316db3d3a4aee"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\Blending.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\Blending.fxh",
+      "path": "nvngx_dlssnr.dll",
+      "sourcePath": "02-DLSS5-Neural-Rendering/nvngx_dlssnr.dll",
+      "sha256": "dcc0dc2414aedec4a8e084647070383be068554042587180c20c784d4772d36f"
+    },
+    {
+      "path": "nvngx_dlss.dll",
+      "sourcePath": "04-DLSS5-Feeder/host64/nvngx_dlss.dll",
+      "sha256": "d202b024cf5a809d4f6cb57b698ca61cdf7e7f664915a3794942042066d7cf72"
+    },
+    {
+      "path": "reshade-shaders\\Shaders\\Blending.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/Blending.fxh",
       "sha256": "1eab08b853014fd6aaaae6783c5052de2ec2a74792c149635e4ed44a58660ba3"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\Daltonize.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\Daltonize.fx",
+      "path": "reshade-shaders\\Shaders\\Daltonize.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/Daltonize.fx",
       "sha256": "ab6006e886db0f1fdb9845b892debe774eda9ec498182373aa6ade601d258d3f"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\Deband.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\Deband.fx",
+      "path": "reshade-shaders\\Shaders\\Deband.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/Deband.fx",
       "sha256": "8959ca995090bc89762cc0bf4ba3bb1ffcffdf143e9e0ddaf84f0e004b53dd29"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\DisplayDepth.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\DisplayDepth.fx",
+      "path": "reshade-shaders\\Shaders\\DisplayDepth.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/DisplayDepth.fx",
       "sha256": "e2266c47c75dcc30030c8ec68cf62cf16f2aebe1ecdecf0265d91ce65dbd7f32"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\DLSS5_Feed.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\DLSS5_Feed.fx",
+      "path": "reshade-shaders\\Shaders\\DLSS5_Feed.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/DLSS5_Feed.fx",
       "sha256": "2233d2f04220e4b71832ed6a0a980f0646ac79966f064b10a0566b209fc44b72"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\DrawText.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\DrawText.fxh",
+      "path": "reshade-shaders\\Shaders\\DrawText.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/DrawText.fxh",
       "sha256": "b79cc4dfb3e98bcf4c06193d00ea7631d74f467f73a4deeeee13e71336d3e680"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\LUT.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\LUT.fx",
+      "path": "reshade-shaders\\Shaders\\LUT.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/LUT.fx",
       "sha256": "e3179c023a599d1ebe0c73fa00084a64d0be66f4e5b43a45c1bb25c3c9df0363"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\Macros.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\Macros.fxh",
+      "path": "reshade-shaders\\Shaders\\Macros.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/Macros.fxh",
       "sha256": "78d8974469b0e7bb2fdd5c6a98ee6304d03a614ffd2bc2a66985a54ff5f9b3a0"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\ReShade.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\ReShade.fxh",
+      "path": "reshade-shaders\\Shaders\\ReShade.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/ReShade.fxh",
       "sha256": "6dabfbbaf968c3871905d2ea17f96572ff7b1cec01310b5d0e5252b66b30174f"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\ReShadeUI.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\ReShadeUI.fxh",
+      "path": "reshade-shaders\\Shaders\\ReShadeUI.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/ReShadeUI.fxh",
       "sha256": "78adf672df47460297eb9fe6dd238d2aafa24510b52b84feb1a745dff70eb901"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\TriDither.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\TriDither.fxh",
+      "path": "reshade-shaders\\Shaders\\TriDither.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/TriDither.fxh",
       "sha256": "d6f780996889c0ea2efebde26b515c4acc1ad4310e06affc3d5d42e2f325c42d"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\UIMask.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\UIMask.fx",
+      "path": "reshade-shaders\\Shaders\\UIMask.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/UIMask.fx",
       "sha256": "6d4956102ec8813ed6229b6f3124c4be289d154135b79eea4c28994888c3e9e3"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\qUINT\\qUINT_common.fxh",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\qUINT\\qUINT_common.fxh",
+      "path": "reshade-shaders\\Shaders\\qUINT\\qUINT_common.fxh",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/qUINT/qUINT_common.fxh",
       "sha256": "30cf03a1869e33e9b92f09f79ac9217c001472d014ab91ef3e87e0d41e3f55ec"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Shaders\\SweetFX\\Levels.fx",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Shaders\\SweetFX\\Levels.fx",
+      "path": "reshade-shaders\\Shaders\\SweetFX\\Levels.fx",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/SweetFX/Levels.fx",
       "sha256": "c603d3ea12d6d5710f2246bb7dd446d19e561154656f1fa8d579ca7fbbeef70e"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Textures\\FontAtlas.png",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Textures\\FontAtlas.png",
+      "path": "reshade-shaders\\Textures\\FontAtlas.png",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/FontAtlas.png",
       "sha256": "11a711a8167d1c1606892e6fa6f661a477e749d6cbdb1ff700ac381842066ec3"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Textures\\lut.png",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Textures\\lut.png",
+      "path": "reshade-shaders\\Textures\\lut.png",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/lut.png",
       "sha256": "c81d61b0c7caa5cb8ff77b10183f2a00ffc5b4601ef328f7b9368e625fa9a214"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\AreaTex.png",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\AreaTex.png",
+      "path": "reshade-shaders\\Textures\\SweetFX\\AreaTex.png",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/SweetFX/AreaTex.png",
       "sha256": "0044e6b420a8d98a9dc6a60bedbd43f75cd15ac6052fdedfb2f2f55d3077beed"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\Layer.png",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\Layer.png",
+      "path": "reshade-shaders\\Textures\\SweetFX\\Layer.png",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/SweetFX/Layer.png",
       "sha256": "c9dc422c85df2c9c1ed04dbfc0421f0b4a41bf736adf50d009d172e49b3c05fc"
     },
     {
-      "path": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\SearchTex.png",
-      "sourcePath": "reshade-shaders\\reshade-shaders\\Textures\\SweetFX\\SearchTex.png",
+      "path": "reshade-shaders\\Textures\\SweetFX\\SearchTex.png",
+      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Textures/SweetFX/SearchTex.png",
       "sha256": "55a97853ab64174245701accf315ab63d41776c9cb2aa14c675e653684fd96f3"
-    },
-    {
-      "path": "reshade-shaders\\Shaders\\DLSS5_Feed.fx",
-      "sourcePath": "reshade-shaders\\Shaders\\DLSS5_Feed.fx",
-      "sha256": "2233d2f04220e4b71832ed6a0a980f0646ac79966f064b10a0566b209fc44b72"
     }
   ]
 }

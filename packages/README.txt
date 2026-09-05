@@ -1,2 +1,2 @@
-Поместите сюда архивы компонентов, скачанные с разрешённых официальных источников.
-Утилита не принимает неизвестные установщики и не считает наличие архива доказательством безопасности.
+Place component archives downloaded from approved official sources here.
+The utility rejects unknown installers and does not treat the presence of an archive as proof of safety.

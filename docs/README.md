@@ -1,30 +1,28 @@
 # DLSS5 Universal Installer
 
-Переносимая утилита для Windows 10/11 x64. Поддержка игр DX11 и DX12 планируется в первой версии; 32-битные игры будут поддерживаться только там, где выбранный метод имеет отдельный x86/host-компонент.
+Portable utility for Windows 10/11 x64. The first release targets DX11 and DX12 games. 32-bit games are supported only when the selected method provides a separate x86 or host component.
 
-Запуск: `DLSS5-Universal.cmd`.
+Run `DLSS5-Universal.cmd`.
 
-Первый режим — `Check only`: он не скачивает, не заменяет и не удаляет файлы. Перед установкой утилита должна показать найденный API, native DLSS и возможные конфликты.
+The `Check` mode is read-only: it does not download, replace, or delete files. Before installation it reports the detected API, native DLSS files, and possible conflicts.
 
-Для автоматизированного запуска доступны команды:
+Available command-line actions:
 
-- `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — только анализ игры и JSON manifest;
-- `src\installer.ps1 -Action Packages` — список локальных архивов/DLL из `packages` и их SHA-256.
-- `src\installer.ps1 -Action Download -SourceId "optiscaler"` — скачивание только зафиксированного HTTPS-релиза после включения `allowAutomaticDownloads` и проверки SHA-256;
-- `src\installer.ps1 -Action Bootstrap` — мастер выбора игры и метода: скачивает locked sources, проверяет SHA-256, распаковывает AIO и устанавливает ReShade и выбранный пакет;
-- `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — проверка, backup и установка перечисленных файлов;
-- `src\installer.ps1 -Action Restore` — откат последней установки по manifest.
+- `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — inspect the game and write a JSON manifest;
+- `src\installer.ps1 -Action Packages` — list local archives/DLLs and their SHA-256 values;
+- `src\installer.ps1 -Action Download -SourceId "optiscaler"` — download only a locked HTTPS release after `allowAutomaticDownloads` is enabled and SHA-256 is verified;
+- `src\installer.ps1 -Action Bootstrap` — choose a game and method, download locked sources, verify SHA-256, prepare AIO assets, install ReShade when required, and install the selected package;
+- `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — verify, back up, and install the listed files;
+- `src\installer.ps1 -Action Restore` — restore the latest installation from its manifest.
 
-Пустой каталог `packages` тоже фиксируется manifest-файлом. Скачивание из сети пока намеренно отключено.
-Установка принимает только ZIP-архив и manifest с совпадающим SHA-256 архива и хешами каждого файла. Неизвестные файлы не удаляются.
-Источники для скачивания фиксируются в `config/sources.lock.json`: URL `latest`, поисковые ссылки и записи без SHA-256 отклоняются.
+Sources are pinned in `config/sources.lock.json`. `latest` URLs, search links, and entries without SHA-256 are rejected.
 
-Профили:
+Profiles:
 
-- Native/Bridge — для игр с собственным DLSS;
-- OptiScaler — отдельный перехватчик апскейлера;
-- ReShade + Feeder — маршрут для игр без native DLSS.
+- Native/Bridge — for games with native DLSS;
+- OptiScaler — a separate upscaler interceptor;
+- ReShade + Feeder — a route for games without native DLSS.
 
-Архивы хранятся только в `packages`. Резервируются конкретные изменяемые файлы, полная копия игры не создаётся.
+Only the specific files being changed are backed up. A full game copy is never created.
 
-Общие настройки находятся в `config/settings.json`: язык, поддерживаемые API, обязательное сравнение методов, предупреждение перед повышением прав, порядок поиска локальных пакетов и запрет удаления неизвестных файлов.
+Shared settings are in `config/settings.json`: language, supported APIs, mandatory method comparison, elevation warning, local package preference, and the rule against deleting unknown files.

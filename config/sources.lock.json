@@ -1,8 +1,8 @@
 {
   "_comments": {
-    "sha256": "Обязателен. Команда Download откажется работать без 64-символьного SHA-256.",
-    "url": "Фиксированный HTTPS URL конкретного официального release asset.",
-    "policy": "Заполнять только официальными или авторскими upstream-релизами. Не использовать URL поиска или latest."
+    "sha256": "Required. Download refuses to work without a 64-character SHA-256.",
+    "url": "Fixed HTTPS URL for a specific official release asset.",
+    "policy": "Use only official or author upstream releases. Do not use search URLs or latest."
   },
   "sources": [
     {

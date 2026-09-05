@@ -1,20 +1,20 @@
-# Тестовая матрица
+# Test matrix
 
-Для первой серии тестов используются три разные игры и три разных метода:
+The first test series uses three different games and three different methods:
 
-| Игра | Метод | Что проверяем |
+| Game | Method | What it checks |
 |---|---|---|
-| Routine | Native/Bridge | Минимальная нагрузка при штатном DLSS |
-| GRAIN.ROT | OptiScaler | Перехват апскейлера в Unreal Engine |
-| Rogue Legacy 2 | ReShade + Feeder | Depth buffer, motion vectors и постобработка |
+| Routine | Native/Bridge | Lowest overhead with native DLSS |
+| GRAIN.ROT | OptiScaler | Upscaler interception in Unreal Engine |
+| Rogue Legacy 2 | ReShade + Feeder | Depth buffer, motion vectors, and post-processing |
 
-Для каждой игры порядок одинаковый:
+Use the same order for each game:
 
-1. Запустить `-Action Check` и сохранить manifest.
-2. Снять baseline: разрешение, пресет, native FPS без генерации кадров.
-3. Установить только один проверенный ZIP manifest.
-4. Проверить запуск, изображение и логи.
-5. Снять те же замеры.
-6. При проблеме выполнить `-Action Restore` и убедиться, что игра запускается снова.
+1. Run `-Action Check` and save the manifest.
+2. Record the baseline: resolution, preset, and native FPS without frame generation.
+3. Install one verified package manifest.
+4. Check launch, image quality, and logs.
+5. Record the same measurements again.
+6. If there is a problem, run `-Action Restore` and confirm that the game launches again.
 
-Архивы и их manifest должны быть получены из официального репозитория автора или официального сайта проекта. Публичный файл без подтверждённого источника в тестовую матрицу не добавляется.
+Archives and manifests must come from the author's official repository or the project's official website. A public file without a confirmed source is not added to the test matrix.

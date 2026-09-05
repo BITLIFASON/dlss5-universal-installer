@@ -1,6 +1,6 @@
-# Локальные пакеты
+# Local packages
 
-Установка будет разрешена только для пакета, который заранее находится в `packages` и описан проверяемым manifest-файлом. Минимальная схема:
+Installation is allowed only for a package already present in `packages` and described by a verifiable manifest. Minimal example:
 
 ```json
 {
@@ -9,16 +9,16 @@
   "method": "OptiScaler",
   "archive": "example-method.zip",
   "installRelativeTo": "primaryExecutableDirectory",
-  "sha256": "<sha256 архива>",
-  "source": "https://официальный-источник/релиз",
+  "sha256": "<archive sha256>",
+  "source": "https://official-source/release",
   "files": [
-    { "path": "dxgi.dll", "sourcePath": "OptiScaler.dll", "sha256": "<sha256 файла после распаковки>" }
+    { "path": "dxgi.dll", "sourcePath": "OptiScaler.dll", "sha256": "<extracted file sha256>" }
   ]
 }
 ```
 
-`path` — имя назначения в папке игры. Необязательный `sourcePath` — имя файла внутри архива; это позволяет, например, безопасно установить `OptiScaler.dll` как `dxgi.dll` после явного указания в manifest.
+`path` is the destination path inside the game folder. Optional `sourcePath` is the file path inside the archive; this makes an explicit mapping such as `OptiScaler.dll` to `dxgi.dll` auditable.
 
-`source` нужен для аудита происхождения. Публичный архив сам по себе не является доказательством безопасности. До появления такого manifest-файла утилита может только показать инвентарь и хеши, но не устанавливает пакет.
+`source` records provenance for auditing. A public archive alone is not proof of safety. Until a manifest exists, the tool can only inventory and hash a package; it cannot install it.
 
-Для автоматической загрузки используется отдельный `config/sources.lock.json`. В нём должны быть конкретные версии, HTTPS URL release asset и ожидаемый SHA-256. Поле `allowAutomaticDownloads` в `config/settings.json` по умолчанию выключено.
+Automatic downloads use the separate `config/sources.lock.json` file. It must contain a specific version, an HTTPS release asset URL, and the expected SHA-256. `allowAutomaticDownloads` in `config/settings.json` is disabled by default for the standalone Download action; the explicit Bootstrap action performs the locked download flow.

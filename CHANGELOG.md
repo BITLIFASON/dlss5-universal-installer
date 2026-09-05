@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-- Initial portable project structure.
-- Safe check mode and method comparison scaffold.
-- Shared JSON settings with RU/EN selection.
-- Separate package, backup, log, manifest, and documentation directories.
+- Added the initial portable project structure.
+- Added safe inspection mode and method comparison.
+- Added shared JSON settings with RU/EN interface selection.
+- Added separate package, backup, log, manifest, and documentation directories.
 - Implemented read-only game inspection with PE architecture detection, DLSS/proxy hints, and timestamped JSON manifests.
-- Implemented local package inventory with SHA-256 hashes; automatic downloads remain disabled.
+- Implemented local package inventory with SHA-256 hashes.
 - Implemented verified ZIP installation, per-file hash checks, point backups, restore, and optional elevation.
-- Added bootstrap preparation from locked sources, including automatic 7zr extraction of multipart DLSS5-AIO.
+- Added Bootstrap preparation from locked sources, including automatic 7zr extraction of multipart DLSS5-AIO archives.

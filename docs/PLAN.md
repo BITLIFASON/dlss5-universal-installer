@@ -1,12 +1,12 @@
-# План
+# Plan
 
-- [x] Отдельная переносимая папка внутри рабочего проекта.
-- [x] Точка запуска `.cmd` и PowerShell-бэкенд.
-- [x] Переключатель языка RU/EN.
-- [x] Безопасный режим проверки без изменений.
-- [x] Сравнение трёх методов до выбора.
-- [x] Реальное скачивание только с разрешённых источников.
-- [x] Проверка SHA-256 и manifest пакетов (локальные файлы в `packages`).
-- [x] Установка Native/Bridge, OptiScaler и Feeder через проверенный локальный ZIP manifest.
-- [x] Точечный backup и restore.
-- [x] Тестирование на отдельной тестовой игре.
+- [x] Create an isolated portable folder inside the workspace.
+- [x] Add a `.cmd` launcher and PowerShell backend.
+- [x] Add RU/EN interface switching.
+- [x] Add a safe read-only inspection mode.
+- [x] Compare three methods before selection.
+- [x] Download only from allowlisted locked sources.
+- [x] Verify SHA-256 and package manifests.
+- [x] Install Native/Bridge, OptiScaler, and Feeder packages.
+- [x] Create point backups and support restore.
+- [x] Test the installation pipeline on an isolated synthetic game folder.

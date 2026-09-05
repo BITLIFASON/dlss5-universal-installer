@@ -1,15 +1,15 @@
-# Методы
+# Methods
 
 ## Native/Bridge
 
-Используется, когда игра уже содержит native DLSS. Дополнительный bridge/add-on перехватывает штатный вызов. Обычно это первый кандидат по производительности.
+Use this when the game already ships with native DLSS. An additional bridge or add-on intercepts the existing call. It is usually the first performance candidate.
 
 ## OptiScaler
 
-Перехватывает путь апскейлера через proxy DLL и собственную конфигурацию. Может быть полезен, если native/bridge не работает, но требует особенно аккуратного отката.
+Intercepts the upscaler path through a proxy DLL and its own configuration. It can help when Native/Bridge does not work, but requires especially careful rollback.
 
 ## ReShade + Feeder
 
-ReShade получает изображение, depth buffer и motion vectors; Feeder формирует DLAA-контракт для DLSS5. Это самый универсальный маршрут, но он обычно дороже по FPS и чувствительнее к игре.
+ReShade receives the image, depth buffer, and motion vectors; Feeder builds a DLAA contract for DLSS5. This is the most universal route, but it usually costs more FPS and is more sensitive to the game.
 
-Универсальный установщик не будет считать эти методы совместимыми одновременно. Перед переключением создаётся отдельный manifest и backup.
+The installer never treats these methods as compatible at the same time. A separate manifest and point backup are created before switching.

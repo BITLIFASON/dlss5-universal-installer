@@ -1,21 +1,18 @@
 {
   "_comments": {
-    "language": "Язык интерфейса: ru или en",
-    "supportedApis": "Поддерживаемые API первой версии",
-    "compareBeforeInstall": "Перед установкой показывать сравнение методов",
-    "warnBeforeElevation": "Показывать предупреждение перед запросом прав администратора",
-    "useLocalPackagesFirst": "Сначала искать архивы в папке packages",
-    "allowAutomaticDownloads": "Автоматические загрузки отключены до проверки источника и SHA-256",
-    "deleteUnknownFiles": "Не удалять файлы, которых нет в manifest утилиты"
+    "language": "Interface language: ru or en",
+    "supportedApis": "Supported APIs for the first release",
+    "compareBeforeInstall": "Show a method comparison before installation",
+    "warnBeforeElevation": "Show a warning before requesting administrator rights",
+    "useLocalPackagesFirst": "Look for archives in packages first",
+    "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
+    "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
   },
-  "language": "ru",
-  "supportedApis": [
-    "DX11",
-    "DX12"
-  ],
-  "compareBeforeInstall": true,
-  "warnBeforeElevation": true,
-  "useLocalPackagesFirst": true,
-  "allowAutomaticDownloads": false,
-  "deleteUnknownFiles": false
+  "language": "Interface language: ru or en",
+  "supportedApis": "Supported APIs for the first release",
+  "compareBeforeInstall": "Show a method comparison before installation",
+  "warnBeforeElevation": "Show a warning before requesting administrator rights",
+  "useLocalPackagesFirst": "Look for archives in packages first",
+  "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
+  "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
 }

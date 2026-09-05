@@ -1,0 +1,29 @@
+{
+  "_comments": {
+    "path": "Пути нужно проверить на конкретном ПК перед установкой",
+    "baseline": "Сначала снять native FPS и отдельно FPS после frame generation"
+  },
+  "targets": [
+    {
+      "id": "routine",
+      "name": "Routine",
+      "defaultPath": "C:\\Games\\Routine",
+      "method": "NativeBridge",
+      "reason": "В каталоге обнаружены native DLSS DLL; Unreal Engine Win64 кандидат."
+    },
+    {
+      "id": "grain-rot",
+      "name": "GRAIN.ROT",
+      "defaultPath": "C:\\Games\\GRAIN.ROT",
+      "method": "OptiScaler",
+      "reason": "Unreal Engine Win64 кандидат без обнаруженных native DLSS DLL."
+    },
+    {
+      "id": "rogue-legacy-2",
+      "name": "Rogue Legacy 2",
+      "defaultPath": "C:\\Games\\Rogue Legacy 2",
+      "method": "Feeder",
+      "reason": "Unity-кандидат без обнаруженных native DLSS DLL; проверяем ReShade/depth путь."
+    }
+  ]
+}

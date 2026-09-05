@@ -1,6 +1,6 @@
 ﻿[CmdletBinding()]
 param(
-  [ValidateSet('Menu','Check','Packages','Download','Bootstrap','Install','Restore')][string]$Action = 'Menu',
+  [ValidateSet('Menu','Check','Packages','Download','Bootstrap','Install','Restore','CleanManifests')][string]$Action = 'Menu',
   [string]$GamePath,
   [string]$PackageManifest,
   [string]$SourceId,
@@ -233,6 +233,23 @@ function Run-Packages {
   else { $inventory | Format-Table name,extension,size,sha256 -AutoSize }
   $manifest = Save-JsonManifest 'packages' $inventory
   Write-Log ("PACKAGES; manifest={0}" -f $manifest)
+}
+function Run-CleanManifests {
+  $files = @(Get-ChildItem -LiteralPath $Dirs.Manifests -File -ErrorAction SilentlyContinue)
+  $automatic = @($files | Where-Object { $_.Name -match '^(check|packages)-.*\.json$' })
+  $protected = @($files | Where-Object { $_.Name -notmatch '^(check|packages)-.*\.json$' })
+  foreach ($file in $automatic) { Remove-Item -LiteralPath $file.FullName -Force; Write-Log ("MANIFEST_REMOVED {0}" -f $file.FullName) }
+  if ($automatic.Count -gt 0) { Write-Host (T ("Удалено без подтверждения: {0} check/packages manifest." -f $automatic.Count) ("Removed without confirmation: {0} check/packages manifest(s)." -f $automatic.Count)) -ForegroundColor Green }
+  if ($protected.Count -eq 0) {
+    if ($automatic.Count -eq 0) { Write-Host (T 'Манифесты для очистки не найдены.' 'No manifests to clean were found.') -ForegroundColor Yellow }
+    return
+  }
+  Write-Host ''; Write-Host (T 'Для удаления с подтверждением найдены:' 'The following manifests require confirmation:') -ForegroundColor Yellow
+  $protected | ForEach-Object { Write-Host (" - {0}" -f $_.Name) }
+  if ((Read-Input 'Удалить эти манифесты? (y/n)' 'Delete these manifests? (y/n)') -match '^(y|yes|д|да)$') {
+    foreach ($file in $protected) { Remove-Item -LiteralPath $file.FullName -Force; Write-Log ("MANIFEST_REMOVED {0}" -f $file.FullName) }
+    Write-Host (T 'Подтверждённые манифесты удалены.' 'Confirmed manifests removed.') -ForegroundColor Green
+  } else { Write-Host (T 'Манифесты с подтверждением сохранены.' 'Confirmation-required manifests were kept.') -ForegroundColor Yellow }
 }
 function Get-SourceLock {
   $path = Join-Path $Root 'config\sources.lock.json'
@@ -785,7 +802,8 @@ function Invoke-Menu {
     Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
     Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
     Write-Host (T '7. Настройки' '7. Settings')
-    Write-Host (T '8. Выход' '8. Exit')
+    Write-Host (T '8. Очистить манифесты' '8. Clean generated manifests')
+    Write-Host (T '9. Выход' '9. Exit')
     switch (Read-Input 'Выберите действие' 'Choose action') {
       '1' { Run-Bootstrap $GamePath $Method $null }
       '2' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Check $p }
@@ -794,7 +812,8 @@ function Invoke-Menu {
       '5' { $p = if ($GamePath) { $GamePath } else { Read-GamePath }; Run-Install $p $PackageManifest }
       '6' { Run-Restore }
       '7' { Invoke-SettingsMenu }
-      '8' { return $false }
+      '8' { Run-CleanManifests }
+      '9' { return $false }
       default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
     }
     return $true
@@ -813,6 +832,7 @@ function Main {
   if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $Api; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest $ExecutablePath; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
+  if ($Action -eq 'CleanManifests') { Run-CleanManifests; return }
   while (Invoke-Menu) { }
 }
 try { Main } catch { Write-Error $_; exit 1 }

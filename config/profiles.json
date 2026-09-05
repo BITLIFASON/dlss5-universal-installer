@@ -1,0 +1,20 @@
+{
+  "NativeBridge": {
+    "label_ru": "Native/Bridge",
+    "label_en": "Native/Bridge",
+    "requires": ["native_dlss"],
+    "notes": "Перехватывает штатный DLSS игры; обычно минимальная дополнительная нагрузка."
+  },
+  "OptiScaler": {
+    "label_ru": "OptiScaler",
+    "label_en": "OptiScaler",
+    "requires": ["dx11_or_dx12"],
+    "notes": "Заменяет или перехватывает путь апскейлера; возможны конфликты proxy DLL."
+  },
+  "Feeder": {
+    "label_ru": "ReShade + Feeder",
+    "label_en": "ReShade + Feeder",
+    "requires": ["dx11_or_dx12", "depth_buffer"],
+    "notes": "Создаёт DLAA-контракт из изображения, depth buffer и motion vectors."
+  }
+}

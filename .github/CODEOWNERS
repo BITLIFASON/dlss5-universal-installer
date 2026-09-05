@@ -1,0 +1,3 @@
+# Основной владелец проекта. В настройках branch protection включите
+# Require review from Code Owners, чтобы PR нельзя было слить без review.
+* @BITLIFASON

@@ -1,0 +1,15 @@
+# Local runtime data and downloaded binaries
+logs/*
+!logs/.gitkeep
+backups/*
+!backups/.gitkeep
+packages/*
+!packages/README.txt
+staging/*
+manifests/*
+!manifests/.gitkeep
+
+# PowerShell/editor noise
+*.log
+*.tmp
+Thumbs.db

@@ -30,3 +30,4 @@
 - Completed the README documentation index with descriptions for every Markdown file in docs/.
 - Removed the documentation index from the root README at the repository-level presentation request; docs/ files remain available.
 - Added compatibility and troubleshooting guides covering supported APIs, method selection, recovery, and diagnostics.
+- Added the documentation index to the root README and fixed guide links in docs/README.md.

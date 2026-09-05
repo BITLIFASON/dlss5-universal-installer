@@ -444,9 +444,76 @@ function Get-FileSnapshot([string]$Root) {
   }
   return $snapshot
 }
+function Get-ReShadeState([string]$InstallRoot) {
+  $hooks = @(Get-ChildItem -LiteralPath $InstallRoot -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^(dxgi|d3d9|d3d10|d3d11|d3d12|opengl32|dinput8)\.dll$' })
+  foreach ($hook in $hooks) {
+    try {
+      $text = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($hook.FullName))
+      if ($text -match 'ReShade') {
+        return [ordered]@{ installed=$true; path=$hook.FullName; addonSupport=($text -match 'Searching for add-ons') }
+      }
+    } catch { }
+  }
+  return [ordered]@{ installed=$false; path=$null; addonSupport=$false }
+}
+function Remove-DetectedReShade([string]$InstallRoot,$State) {
+  $knownAddons = @('dlss5-feed.addon64','dlss5-bridge.addon64','dlss5-dx11-bridge.addon64','renodx-dlss5.addon64','nvngx_dlssnr.dll')
+  $targets = @($State.path,(Join-Path $InstallRoot 'ReShade.ini'),(Join-Path $InstallRoot 'ReShade.log'),(Join-Path $InstallRoot 'ReShadePreset.ini'))
+  foreach ($name in $knownAddons) { $targets += Join-Path $InstallRoot $name }
+  $targets = @($targets | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) })
+  if ($targets.Count -eq 0) { Write-Host (T 'Известные компоненты для удаления не найдены.' 'No known components to remove were found.') -ForegroundColor Yellow; return }
+  $stamp = 'untracked-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+  $backupRoot = Join-Path $Dirs.Backups $stamp
+  $records = @()
+  foreach ($target in $targets) {
+    $relative = Get-RelativePath $InstallRoot $target
+    $backup = Join-Path $backupRoot $relative
+    New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
+    Copy-Item -LiteralPath $target -Destination $backup -Force
+    $records += [ordered]@{ installRoot=$InstallRoot; path=$relative; existed=$true; originalSha256=Get-Sha256 $target; backup=$backup; installedSha256=Get-Sha256 $target }
+  }
+  try {
+    foreach ($target in $targets) { Remove-Item -LiteralPath $target -Force; Write-Log ("RESHADE_REMOVED {0}" -f $target) }
+  } catch {
+    Restore-Records $records
+    throw
+  }
+  $manifest = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$InstallRoot; installRoot=$InstallRoot; packageId='untracked-cleanup'; packageVersion='manual-snapshot'; method='UntrackedCleanup'; files=$records }
+  $manifestPath = Save-JsonManifest 'install' $manifest
+  Write-Log ("UNTRACKED_CLEANUP {0}; manifest={1}" -f $InstallRoot,$manifestPath)
+  Write-Host (T 'Компоненты удалены. Точечная копия сохранена; Restore вернёт ручную установку, но не оригинальные файлы игры.' 'Components removed. A point snapshot was saved; Restore will bring back the manual installation, not the original game files.') -ForegroundColor Yellow
+}
 function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot) {
+  $state = Get-ReShadeState $InstallRoot
+  $forceReinstall = $false
+  if ($state.installed) {
+    Write-Host (T 'В папке уже обнаружен ReShade или его proxy DLL.' 'An existing ReShade installation or proxy DLL was detected.') -ForegroundColor Yellow
+    Write-Host (T '1. Переустановить поверх текущей установки' '1. Reinstall over the current installation')
+    Write-Host (T '2. Удалить hook, конфигурацию и известные DLSS5-файлы, затем вернуться в главное меню' '2. Remove the hook, configuration, and known DLSS5 files, then return to the main menu')
+    Write-Host (T '3. Отменить' '3. Cancel')
+    $choice = Read-Input 'Выберите действие' 'Choose an action'
+    if ($choice -eq '2') {
+      Write-Host (T 'Предупреждение: pristine backup отсутствует. Если игровые DLL были заменены вручную, их оригиналы этой операцией восстановить нельзя. Удаление может сломать ReShade, preset или игру.' 'Warning: no pristine backup exists. If game DLLs were replaced manually, this operation cannot restore their originals. Removal may break ReShade, the preset, or the game.') -ForegroundColor Red
+      if ((Read-Input 'Удалить обнаруженные компоненты? (y/n)' 'Remove the detected components? (y/n)') -match '^(y|yes|д|да)$') {
+        Remove-DetectedReShade $InstallRoot $state
+        throw [System.OperationCanceledException]::new('Untracked components were removed by user; returning to the main menu.')
+      }
+      throw [System.OperationCanceledException]::new('Existing ReShade removal cancelled; returning to the main menu.')
+    }
+    if ($choice -eq '3') { throw [System.OperationCanceledException]::new('Existing ReShade operation cancelled.') }
+    if ($choice -ne '1') { throw (T 'Некорректный пункт.' 'Invalid choice.') }
+    $forceReinstall = $true
+  }
+  if ($state.installed -and $state.addonSupport -and -not $forceReinstall) {
+    Write-Log ("RESHADE_REUSED {0}; addonSupport=true" -f $state.path)
+    return @()
+  }
   $before = Get-FileSnapshot $InstallRoot
-  $process = Start-Process -FilePath $Installer -ArgumentList @('--headless','--api',$Api,$Executable) -Wait -PassThru
+  $arguments = @('--headless','--api',$Api)
+  if ($state.installed) { $arguments += @('--state','update') }
+  $arguments += $Executable
+  $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
   $after = Get-FileSnapshot $InstallRoot
   $records = @()
   foreach ($relative in $after.Keys) {
@@ -465,7 +532,7 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
   }
   if ($process.ExitCode -ne 0) {
     Restore-Records $records
-    throw ("ReShade setup failed with exit code {0}" -f $process.ExitCode)
+    throw ("ReShade setup failed with exit code {0}. Existing ReShade: {1}; add-on support: {2}" -f $process.ExitCode,$state.installed,$state.addonSupport)
   }
   return @($records)
 }

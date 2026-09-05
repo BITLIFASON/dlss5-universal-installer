@@ -33,7 +33,7 @@ The game folder may not be writable by the current process. The utility shows a 
 
 ## ReShade installation fails
 
-Confirm that the selected executable is the actual game process and that the pinned ReShade Add-on installer was downloaded successfully. If the game already has a ReShade installation, restore or review its files before installing another runtime.
+If the game already has ReShade or a proxy DLL, the wizard offers three choices: reinstall over it, remove the detected hook, configuration, and known DLSS5 add-on files, or cancel. This cleanup is available even without an installation manifest. Before removal, the utility creates a point snapshot and adds it to **Restore**. That snapshot can restore the manual components, but it cannot recover original game files that were overwritten before the snapshot. The `reshade-shaders` folder, unknown DLLs, and `nvngx_dlss.dll` are left untouched. Confirm that the selected executable is the actual game process and that the pinned ReShade Add-on installer was downloaded successfully.
 
 ## How to collect useful diagnostics
 

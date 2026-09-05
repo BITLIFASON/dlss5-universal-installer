@@ -45,3 +45,6 @@
 - Added an explicit compatibility warning before experimental Native/Bridge or OptiScaler choices.
 - Added a global project TODO with implementation, compatibility, UX, and release backlogs.
 - Expanded the TODO with the PE/API scanning, bounded traversal, ReShade detection, active-state, and binary-reporting work identified during the DLSS5-Swapper review.
+- Added an explicit existing-ReShade choice: reinstall, remove the detected hook/configuration and return to the menu, or cancel.
+- Extended unmanaged cleanup to remove known DLSS5 add-on files without touching shader folders, unknown DLLs, or `nvngx_dlss.dll`.
+- Unmanaged cleanup now creates a point snapshot that can restore the removed manual components; it explicitly warns that overwritten game DLL originals cannot be recovered.

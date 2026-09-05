@@ -56,7 +56,7 @@ After installation, compare the same save, scene, settings, and camera position:
 
 ## ↩️ Restore
 
-Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. If a file changed after installation, the tool warns before overwriting it. Only files recorded by that installation are restored or removed; a full game copy is never created.
+Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. If a file changed after installation, the tool warns before overwriting it. Only files recorded by that installation are restored or removed; a full game copy is never created. An untracked cleanup snapshot can restore the manual components it saved, but cannot restore game DLL originals that were overwritten before the snapshot.
 
 ## ✨ Features
 

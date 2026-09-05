@@ -500,6 +500,16 @@ function Restore-Records($Records) {
     } catch { Write-Warning ("Rollback failed for {0}: {1}" -f $destination,$_.Exception.Message) }
   }
 }
+function Normalize-InstallRecord($Record) {
+  [ordered]@{
+    installRoot = [string]$Record.installRoot
+    path = [string]$Record.path
+    existed = [bool]$Record.existed
+    originalSha256 = if ($Record.originalSha256) { [string]$Record.originalSha256 } else { $null }
+    backup = if ($Record.backup) { [string]$Record.backup } else { $null }
+    installedSha256 = if ($Record.installedSha256) { [string]$Record.installedSha256 } else { $null }
+  }
+}
 function Get-FileSnapshot([string]$Root) {
   $snapshot = @{}
   if (Test-Path -LiteralPath $Root -PathType Container) {
@@ -732,6 +742,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
     Restore-Records $records
     throw
   }
+  $records = @($records | ForEach-Object { Normalize-InstallRecord $_ })
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
@@ -899,6 +910,7 @@ function Invoke-Menu {
     Write-Host (T 'Операция отменена. Возврат в главное меню.' 'Operation cancelled. Returning to the main menu.') -ForegroundColor Yellow
     return $true
   } catch {
+    try { Write-Log ("MENU_ERROR {0}`n{1}" -f $_.Exception.Message,$_.ScriptStackTrace) } catch { }
     Write-Error $_
     return $true
   }

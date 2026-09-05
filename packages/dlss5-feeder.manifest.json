@@ -52,11 +52,6 @@
       "sha256": "e2266c47c75dcc30030c8ec68cf62cf16f2aebe1ecdecf0265d91ce65dbd7f32"
     },
     {
-      "path": "reshade-shaders\\Shaders\\DLSS5_Feed.fx",
-      "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/DLSS5_Feed.fx",
-      "sha256": "2233d2f04220e4b71832ed6a0a980f0646ac79966f064b10a0566b209fc44b72"
-    },
-    {
       "path": "reshade-shaders\\Shaders\\DrawText.fxh",
       "sourcePath": "04-DLSS5-Feeder/reshade-shaders/Shaders/DrawText.fxh",
       "sha256": "b79cc4dfb3e98bcf4c06193d00ea7631d74f467f73a4deeeee13e71336d3e680"

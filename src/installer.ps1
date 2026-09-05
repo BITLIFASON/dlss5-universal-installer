@@ -913,7 +913,11 @@ function Main {
   if ($Action -eq 'CleanManifests') { Run-CleanManifests; return }
   while (Invoke-Menu) { }
 }
-try { Main } catch { Write-Error $_; exit 1 }
+try { Main } catch {
+  try { Write-Log ("ERROR {0}`n{1}" -f $_.Exception.Message,$_.ScriptStackTrace) } catch { }
+  Write-Error $_
+  exit 1
+}
 
 
 

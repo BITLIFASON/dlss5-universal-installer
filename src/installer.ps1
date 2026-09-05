@@ -24,7 +24,7 @@ function Get-Settings {
   if (-not (Test-Path -LiteralPath $SettingsPath)) {
     [ordered]@{
       _comments = 'Edit values as needed. Keep automatic downloads disabled until a source and hash are verified.'
-      language = 'ru'
+      language = 'en'
       supportedApis = @('DX11','DX12')
       compareBeforeInstall = $true
       warnBeforeElevation = $true

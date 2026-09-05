@@ -8,12 +8,12 @@
     "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
     "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
   },
-  "language": "Interface language: ru or en",
+  "language": "en",
   "supportedApis": "Supported APIs for the first release",
   "compareBeforeInstall": "Show a method comparison before installation",
-  "warnBeforeElevation": "Show a warning before requesting administrator rights",
+  "warnBeforeElevation": true,
   "useLocalPackagesFirst": "Look for archives in packages first",
-  "allowAutomaticDownloads": "Automatic downloads are disabled until the source and SHA-256 are reviewed",
-  "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest",
+  "allowAutomaticDownloads": false,
+  "deleteUnknownFiles": false,
   "interfaceMode": "simple"
 }

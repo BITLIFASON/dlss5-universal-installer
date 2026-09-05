@@ -11,7 +11,7 @@
 - `src\installer.ps1 -Action Check -GamePath "C:\\Games\\MyGame"` — только анализ игры и JSON manifest;
 - `src\installer.ps1 -Action Packages` — список локальных архивов/DLL из `packages` и их SHA-256.
 - `src\installer.ps1 -Action Download -SourceId "optiscaler"` — скачивание только зафиксированного HTTPS-релиза после включения `allowAutomaticDownloads` и проверки SHA-256;
-- `src\installer.ps1 -Action Bootstrap` — мастер выбора игры и метода с автоматической установкой ReShade и подготовленного пакета;
+- `src\installer.ps1 -Action Bootstrap` — мастер выбора игры и метода: скачивает locked sources, проверяет SHA-256, распаковывает AIO и устанавливает ReShade и выбранный пакет;
 - `src\installer.ps1 -Action Install -GamePath "C:\\Games\\MyGame" -PackageManifest "packages\\method.manifest.json"` — проверка, backup и установка перечисленных файлов;
 - `src\installer.ps1 -Action Restore` — откат последней установки по manifest.
 

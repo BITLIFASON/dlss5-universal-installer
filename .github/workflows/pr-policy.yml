@@ -1,0 +1,21 @@
+name: Pull request policy
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  require-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a linked issue number
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! printf '%s' "$PR_BODY" | grep -Eq '#[0-9]+'; then
+            echo 'Pull request must reference an Issue, for example: Closes #12'
+            exit 1
+          fi

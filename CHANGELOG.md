@@ -27,3 +27,4 @@
 - Added a component and source index with official upstream links, pinned versions, package manifests, and SHA-256 lockfile references.
 - Fixed README section formatting for the component index link.
 - Added a README documentation index linking to the component, method, manifest, safety, testing, and plan documents in docs/.
+- Completed the README documentation index with descriptions for every Markdown file in docs/.

@@ -60,7 +60,7 @@ See [Components and sources](docs/COMPONENTS.md) for the pinned versions, offici
 
 | Document | Purpose |
 |---|---|
-| [Components and sources](docs/COMPONENTS.md) | Pinned components, official upstream links, versions, and file groups |
+| [Components and sources](docs/COMPONENTS.md) | Pinned components, official upstream links, versions, and file groups |`n| [Documentation guide](docs/README.md) | Portable-tool usage, actions, profiles, and settings overview |
 | [Methods](docs/METHODS.md) | When to use Native/Bridge, OptiScaler, or ReShade + Feeder |
 | [Package manifest](docs/PACKAGE-MANIFEST.md) | Manifest format for custom packages and alternate versions |
 | [Safety](docs/SAFETY.md) | Download, backup, elevation, and anti-cheat boundaries |
@@ -117,6 +117,7 @@ src\installer.ps1 -Action Restore
 - `docs/` — public operating and safety documentation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [docs/README.md](docs/README.md), and [LICENSE](LICENSE).
+
 
 
 

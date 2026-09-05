@@ -15,10 +15,10 @@
 - Documented custom package and alternate-version installation through local manifests.
 - Added universal 0 cancellation at interactive prompts; cancelled operations return to the main menu without installing files.
 - Added menu item 8 for a clean exit and a standard Windows folder picker for game paths.
-- Added Simple and Advanced interface modes for inspection output; menu item 9 now exits the utility.
+- Added Simple and Advanced interface modes for inspection output; the main menu has a dedicated Exit item.
 - Added executable candidate scoring and filters for common Unreal/Unity technical binaries; installation now asks which remaining EXE to target.
 - Moved language, interface mode, automatic downloads, and elevation warnings into a dedicated Settings submenu; the main menu now has a clean Exit item.
-- Changed defaults for a typical English user: English language, simple interface, disabled automatic downloads, enabled elevation warning, and no deletion of unknown files.
+- Changed defaults for a typical English user: English language, simple interface, enabled locked downloads, enabled elevation warning, and no deletion of unknown files.
 - Enabled automatic downloads by default for locked, SHA-256-pinned sources.
 - Updated the fallback configuration and documentation to match the enabled locked-download default.
 - Added ignored `config/settings.local.json` overrides so personal language and interface preferences are not pushed to the repository.
@@ -37,3 +37,4 @@
 - Preserved the selected executable across elevation relaunches and improved API hints using PE import strings.
 - Added transactional rollback for partial installs and tracked ReShade changes in the same installation manifest during Bootstrap.
 - Restore now warns before overwriting files whose post-install SHA-256 changed.
+- Added process and proxy-DLL diagnostics, a dry-run installation plan, local per-game profiles, and optional post-install launch verification.

@@ -25,7 +25,7 @@ $LocalSettingsPath = Join-Path $Root 'config\settings.local.json'
 function Get-Settings {
   if (-not (Test-Path -LiteralPath $SettingsPath)) {
     [ordered]@{
-      _comments = 'Edit values as needed. Keep automatic downloads disabled until a source and hash are verified.'
+      _comments = 'Edit values as needed. Automatic downloads are limited to HTTPS sources with a pinned SHA-256.'
       language = 'en'
       supportedApis = @('DX11','DX12')
       compareBeforeInstall = $true
@@ -78,6 +78,8 @@ function Show-Inspection($Info) {
   $dlss = if ($Info.nativeDlssDetected) { T 'найден' 'detected' } else { T 'не найден' 'not detected' }
   Write-Host ((T "Native DLSS: {0}" "Native DLSS: {0}") -f $dlss)
   Write-Host ((T "Файлов проверено: {0}" "Files inspected: {0}") -f $Info.fileCount)
+  Write-Host ((T "Процесс игры: {0}" "Game process: {0}") -f (if ($Info.processRunning) { T 'запущен' 'running' } else { T 'не запущен' 'not running' }))
+  Write-Host ((T "Proxy DLL найдено: {0}" "Proxy DLLs found: {0}") -f @($Info.proxyFiles).Count)
 }
 function Write-Log([string]$Message) {
   $line = "$(Get-Date -Format o) $Message"
@@ -113,6 +115,10 @@ function Get-ApiHint([string]$ExecutablePath) {
     if ($has11) { return 'DX11 candidate (PE imports)' }
   } catch { }
   return 'Unknown (confirm in game documentation)'
+}
+function Test-GameProcess([string]$ExecutablePath) {
+  $name = [IO.Path]::GetFileNameWithoutExtension($ExecutablePath)
+  return $null -ne (Get-Process -Name $name -ErrorAction SilentlyContinue | Select-Object -First 1)
 }
 function Get-ExecutableScore($Exe,[string]$Root) {
   $score = 0
@@ -158,6 +164,7 @@ function Get-GameInspection([string]$Path) {
     primaryArchitecture = Get-PeArchitecture $executables[0].FullName
     executables = @($executables | ForEach-Object { [ordered]@{ path = $_.FullName; size = $_.Length; architecture = Get-PeArchitecture $_.FullName; candidateScore = $_.candidateScore } })
     apiHint = $apiHint
+    processRunning = Test-GameProcess $executables[0].FullName
     nativeDlssDetected = ($dlss.Count -gt 0)
     dlssFiles = @($dlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     proxyFiles = @($proxy | ForEach-Object { Get-RelativePath $resolved $_.FullName })
@@ -291,6 +298,36 @@ function Get-PackageManifest([string]$Path) {
   }
   return $manifest
 }
+function Show-ConflictReport($Info) {
+  if (@($Info.proxyFiles).Count -eq 0) {
+    Write-Host (T 'Конфликтующие proxy DLL не обнаружены.' 'No proxy DLL conflicts detected.') -ForegroundColor Green
+    return
+  }
+  Write-Host (T 'Обнаружены потенциально конфликтующие DLL:' 'Potentially conflicting DLLs detected:') -ForegroundColor Yellow
+  @($Info.proxyFiles) | ForEach-Object { Write-Host (" - {0}" -f $_) }
+}
+function Show-InstallPlan($Manifest,[string]$InstallRoot) {
+  Write-Host ''; Write-Host (T 'План установки:' 'Installation plan:') -ForegroundColor Cyan
+  foreach ($entry in @($Manifest.files)) {
+    $destination = Join-Path $InstallRoot ([string]$entry.path)
+    $action = if (Test-Path -LiteralPath $destination -PathType Leaf) { T 'замена' 'replace' } else { T 'новый файл' 'new file' }
+    Write-Host (" - [{0}] {1}" -f $action,$destination)
+  }
+}
+function Save-GameProfile($Info,[string]$ExecutablePath,$Manifest,[string]$Api) {
+  $path = Join-Path $Root 'config\game-profiles.local.json'
+  $profiles = @()
+  if (Test-Path -LiteralPath $path -PathType Leaf) { $profiles = @(Get-Content $path -Raw | ConvertFrom-Json) }
+  $profiles = @($profiles | Where-Object { $_.gamePath -ne $Info.gamePath })
+  $profiles += [ordered]@{ gamePath=$Info.gamePath; executable=$ExecutablePath; api=$Api; method=$Manifest.method; packageId=$Manifest.id; packageVersion=$Manifest.version; updated=(Get-Date).ToUniversalTime().ToString('o') }
+  $profiles | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path -Encoding UTF8
+}
+function Offer-Launch([string]$ExecutablePath) {
+  if ((Read-Input 'Запустить выбранный EXE для проверки? (y/n)' 'Launch the selected executable for verification? (y/n)') -match '^(y|yes|д|да)$') {
+    Start-Process -FilePath $ExecutablePath | Out-Null
+    Write-Log ("LAUNCH {0}" -f $ExecutablePath)
+  }
+}
 function Expand-Package([string]$Archive,[string]$Destination) {
   $extension = [IO.Path]::GetExtension($Archive).ToLowerInvariant()
   if ($extension -eq '.zip') { Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force; return }
@@ -376,6 +413,8 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $manifest = Get-PackageManifest (Resolve-Path -LiteralPath $ManifestPath).Path
   $installRoot = $game
   if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $ExecutablePath }
+  Show-ConflictReport $info
+  Show-InstallPlan $manifest $installRoot
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
   if (-not $AlreadyConfirmed -and (Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   if (-not (Ensure-Admin $installRoot $ManifestPath $ExecutablePath)) { return }
@@ -421,6 +460,8 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
   Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте «Восстановление».' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
+  Save-GameProfile $info $ExecutablePath $manifest $info.apiHint
+  Offer-Launch $ExecutablePath
 }
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   if (-not $Path) { $Path = Read-GamePath }

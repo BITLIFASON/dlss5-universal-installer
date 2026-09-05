@@ -9,10 +9,13 @@
     "deleteUnknownFiles": "Do not delete files that are absent from the utility manifest"
   },
   "language": "en",
-  "supportedApis": "Supported APIs for the first release",
-  "compareBeforeInstall": "Show a method comparison before installation",
+  "supportedApis": [
+    "DX11",
+    "DX12"
+  ],
+  "compareBeforeInstall": true,
   "warnBeforeElevation": true,
-  "useLocalPackagesFirst": "Look for archives in packages first",
+  "useLocalPackagesFirst": true,
   "allowAutomaticDownloads": true,
   "deleteUnknownFiles": false,
   "interfaceMode": "simple"

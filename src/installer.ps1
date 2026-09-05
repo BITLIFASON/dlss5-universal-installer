@@ -161,9 +161,22 @@ function Get-PackageManifest([string]$Path) {
   if ((Get-Sha256 $archive) -ne ([string]$manifest.sha256).ToLowerInvariant()) { throw (T 'SHA-256 архива не совпадает с manifest.' 'Archive SHA-256 does not match the manifest.') }
   foreach ($entry in @($manifest.files)) {
     if (-not (Test-SafeRelativePath ([string]$entry.path)) -or [string]::IsNullOrWhiteSpace([string]$entry.sha256)) { throw (T 'Некорректный список файлов manifest.' 'Invalid file list in package manifest.') }
+    if ($entry.sourcePath -and -not (Test-SafeRelativePath ([string]$entry.sourcePath))) { throw (T 'Некорректный sourcePath manifest.' 'Invalid sourcePath in package manifest.') }
   }
   $manifest | Add-Member -NotePropertyName _archivePath -NotePropertyValue $archive -Force
   return $manifest
+}
+function Expand-Package([string]$Archive,[string]$Destination) {
+  $extension = [IO.Path]::GetExtension($Archive).ToLowerInvariant()
+  if ($extension -eq '.zip') { Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force; return }
+  if ($extension -in @('.7z','.rar')) {
+    $tar = Get-Command tar.exe -ErrorAction SilentlyContinue
+    if ($null -eq $tar) { throw (T 'Для 7z/rar нужен tar.exe или распакуйте архив вручную.' '7z/rar requires tar.exe or manual extraction.') }
+    & $tar.Source -xf $Archive -C $Destination
+    if ($LASTEXITCODE -ne 0) { throw ("Archive extraction failed: {0}" -f $Archive) }
+    return
+  }
+  throw (T 'Поддерживаются только ZIP, 7z и RAR.' 'Only ZIP, 7z and RAR are supported.')
 }
 function Get-InstalledPackageManifest {
   @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
@@ -187,21 +200,24 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   $info = Get-GameInspection $game
   Show-MethodComparison $info
   $manifest = Get-PackageManifest (Resolve-Path -LiteralPath $ManifestPath).Path
+  $installRoot = $game
+  if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $info.primaryExecutable }
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
   if ((Read-Host (T 'Продолжить установку? (y/n)' 'Continue installation? (y/n)')) -notmatch '^(y|yes|д|да)$') { return }
-  if (-not (Ensure-Admin $game $ManifestPath)) { return }
+  if (-not (Ensure-Admin $installRoot $ManifestPath)) { return }
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
-  Expand-Archive -LiteralPath $manifest._archivePath -DestinationPath $stage -Force
+  Expand-Package $manifest._archivePath $stage
   $backupRoot = Join-Path $Dirs.Backups $stamp
   $records = @()
   foreach ($entry in @($manifest.files)) {
     $relative = ([string]$entry.path).Replace('/','\')
-    $source = Join-Path $stage $relative
+    $sourceRelative = if ($entry.sourcePath) { ([string]$entry.sourcePath).Replace('/','\') } else { $relative }
+    $source = Join-Path $stage $sourceRelative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
     if ((Get-Sha256 $source) -ne ([string]$entry.sha256).ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
-    $destination = Join-Path $game $relative
+    $destination = Join-Path $installRoot $relative
     if (Test-Path -LiteralPath $destination -PathType Leaf) {
       $backup = Join-Path $backupRoot $relative
       New-Item -ItemType Directory -Force -Path (Split-Path $backup) | Out-Null
@@ -211,7 +227,7 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
     New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
   }
-  $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
+  $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; files=$records }
   $installPath = Save-JsonManifest 'install' $install
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
   Write-Host (T 'Установка завершена. Для отката используйте пункт Restore.' 'Installation completed. Use Restore to roll back.') -ForegroundColor Green
@@ -222,10 +238,11 @@ function Run-Restore {
   $selected = $items[0]
   $install = Get-Content -LiteralPath $selected.FullName -Raw | ConvertFrom-Json
   $game = [string]$install.gamePath
+  $installRoot = if ($install.installRoot) { [string]$install.installRoot } else { $game }
   if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из manifest не найдена.' 'Game folder from manifest was not found.') }
   if (-not (Ensure-Admin $game $selected.FullName)) { return }
   foreach ($entry in @($install.files)) {
-    $destination = Join-Path $game ([string]$entry.path)
+    $destination = Join-Path $installRoot ([string]$entry.path)
     if ($entry.existed -and (Test-Path -LiteralPath $entry.backup -PathType Leaf)) { Copy-Item -LiteralPath $entry.backup -Destination $destination -Force }
     elseif (-not $entry.existed -and (Test-Path -LiteralPath $destination -PathType Leaf)) { Remove-Item -LiteralPath $destination -Force }
   }

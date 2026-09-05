@@ -8,25 +8,49 @@
     {
       "id": "reshade-full-addons",
       "version": "6.8.0",
-      "url": "",
-      "sha256": "",
+      "url": "https://reshade.me/downloads/ReShade_Setup_6.8.0_Addon.exe",
+      "sha256": "afe4c8f13048306307983b8b3d41d5bf00a86820440b0e57dea10950e1176445",
       "license": "BSD-3-Clause",
       "sourceType": "official"
     },
     {
       "id": "optiscaler",
-      "version": "",
-      "url": "",
-      "sha256": "",
+      "version": "0.9.4",
+      "url": "https://github.com/optiscaler/OptiScaler/releases/download/v0.9.4/Optiscaler_0.9.4-final.20260718._MM.7z",
+      "sha256": "575cb4df866116093df75af607e37fd70e10f5163e0f23fd5c804142e80ef0ad",
       "license": "see upstream release",
       "sourceType": "official-upstream"
     },
     {
       "id": "dlss5-bridge",
-      "version": "",
-      "url": "",
-      "sha256": "",
+      "version": "1.4.12",
+      "url": "https://github.com/NIGos/dlss5-bridge/releases/download/v1.4.12/dlss5-bridge.addon64",
+      "sha256": "4f2acecc1026ae89ac0b92767be66ceea2662ad0ef88710b89c7da7840d548d4",
       "license": "see upstream repository",
+      "sourceType": "author-upstream"
+    },
+    {
+      "id": "dlss5-aio-v1.2.5-part1",
+      "version": "1.2.5",
+      "url": "https://github.com/ShugokiFable/dlss5-aio/releases/download/v1.2.5/DLSS5-AIO-v1.2.5.7z.001",
+      "sha256": "2989f27cdc86bf60c14d0e7b51a82c5b261521a5eeadb2314b4a7c472449f791",
+      "license": "see bundled component licenses",
+      "sourceType": "author-upstream"
+    },
+    {
+      "id": "dlss5-aio-v1.2.5-part2",
+      "version": "1.2.5",
+      "url": "https://github.com/ShugokiFable/dlss5-aio/releases/download/v1.2.5/DLSS5-AIO-v1.2.5.7z.002",
+      "sha256": "a560ad5d639f236f6d7da47732eda56678bdabc47ebe1c143627b32fc124eaf5",
+      "license": "see bundled component licenses",
+      "sourceType": "author-upstream"
+    },
+    {
+      "id": "dlss5-aio-v1.2.5-part3",
+      "version": "1.2.5",
+      "url": "https://github.com/ShugokiFable/dlss5-aio/releases/download/v1.2.5/DLSS5-AIO-v1.2.5.7z.003",
+      "sha256": "9eb94d5a2d16444e7e888c5016a3bc291a92d19dcd96039406e29a4f1687b884",
+      "license": "see bundled component licenses",
       "sourceType": "author-upstream"
     }
   ]

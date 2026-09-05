@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [ValidateSet('Menu','Check','Packages','Download','Bootstrap','Install','Restore')][string]$Action = 'Menu',
   [string]$GamePath,
@@ -38,6 +38,11 @@ function Get-Settings {
 $Settings = Get-Settings
 
 function T([string]$ru,[string]$en) { if ($Settings.language -eq 'en') { return $en }; return $ru }
+function Read-Input([string]$ru,[string]$en) {
+  $value = Read-Host (T "$ru (0 = отмена)" "$en (0 = cancel)")
+  if ($value -match '^(0|q|quit|cancel|отмена)$') { throw [System.OperationCanceledException]::new('Operation cancelled by user.') }
+  return $value
+}
 function Write-Log([string]$Message) {
   $line = "$(Get-Date -Format o) $Message"
   Add-Content -LiteralPath (Join-Path $Dirs.Logs 'installer.log') -Value $line -Encoding UTF8
@@ -223,7 +228,7 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
   $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
   if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return $true }
   if ($Settings.warnBeforeElevation) {
-    $answer = Read-Host (T 'Установка может потребовать права администратора. Перезапустить с повышенными правами? (y/n)' 'Installation may require administrator rights. Relaunch elevated? (y/n)')
+    $answer = Read-Input 'Установка может потребовать права администратора. Перезапустить с повышенными правами? (y/n)' 'Installation may require administrator rights. Relaunch elevated? (y/n)'
     if ($answer -notmatch '^(y|yes|д|да)$') { return $false }
   }
   $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Action Install -GamePath `"$InstallGamePath`" -PackageManifest `"$ManifestPath`""
@@ -231,7 +236,7 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
   return $false
 }
 function Run-Install([string]$Path,[string]$ManifestPath) {
-  if (-not $ManifestPath) { $ManifestPath = Read-Host (T 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)') }
+  if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $info = Get-GameInspection $game
   Show-MethodComparison $info
@@ -239,7 +244,7 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   $installRoot = $game
   if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $info.primaryExecutable }
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
-  if ((Read-Host (T 'Продолжить установку? (y/n)' 'Continue installation? (y/n)')) -notmatch '^(y|yes|д|да)$') { return }
+  if ((Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   if (-not (Ensure-Admin $installRoot $ManifestPath)) { return }
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $stage = Join-Path $Dirs.Staging $stamp
@@ -271,11 +276,11 @@ function Run-Install([string]$Path,[string]$ManifestPath) {
   Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте Restore.' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
 }
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
-  if (-not $Path) { $Path = Read-Host (T 'Укажите папку игры' 'Enter game folder') }
+  if (-not $Path) { $Path = Read-Input 'Укажите папку игры' 'Enter game folder' }
   $info = Get-GameInspection $Path
   if (-not $SelectedMethod) {
     Show-MethodComparison $info
-    $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Host (T 'Метод (1-3)' 'Method (1-3)')) - 1]
+    $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Input 'Метод (1-3)' 'Method (1-3)') - 1]
   }
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
@@ -303,7 +308,7 @@ function Run-Restore {
     $entry = Get-Content -LiteralPath $items[$i].FullName -Raw | ConvertFrom-Json
     Write-Host ("{0}. {1} | {2} {3} | {4}" -f ($i + 1),$entry.gamePath,$entry.packageId,$entry.packageVersion,$items[$i].Name)
   }
-  $choice = Read-Host (T 'Выберите номер установки' 'Choose an installation number')
+  $choice = Read-Input 'Выберите номер установки' 'Choose an installation number'
   $index = 0
   if (-not [int]::TryParse($choice,[ref]$index) -or $index -lt 1 -or $index -gt $items.Count) { throw (T 'Некорректный номер установки.' 'Invalid installation number.') }
   $selected = $items[$index - 1]
@@ -321,36 +326,47 @@ function Run-Restore {
   Write-Host (T 'Откат завершён.' 'Restore completed.') -ForegroundColor Green
 }
 function Set-Language {
-  $value = Read-Host (T 'Язык (ru/en)' 'Language (ru/en)')
+  $value = Read-Input 'Язык (ru/en)' 'Language (ru/en)'
   if ($value -notmatch '^(ru|en)$') { throw (T 'Допустимы только ru или en.' 'Only ru or en are accepted.') }
   $Settings.language = $value
   $Settings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $SettingsPath -Encoding UTF8
   $script:Settings = Get-Settings
 }
+function Invoke-Menu {
+  try {
+    Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
+    Write-Host (T '1. Автоматическая установка' '1. Automatic installation')
+    Write-Host (T '2. Проверить игру' '2. Check game')
+    Write-Host (T '3. Проверить packages и SHA-256' '3. Inventory packages and SHA-256')
+    Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
+    Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
+    Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
+    Write-Host (T '7. Язык' '7. Language')
+    switch (Read-Input 'Выберите действие' 'Choose action') {
+      '1' { Run-Bootstrap $GamePath $Method $null }
+      '2' { $p = if ($GamePath) { $GamePath } else { Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Check $p }
+      '3' { Run-Packages }
+      '4' { $s = if ($SourceId) { $SourceId } else { Read-Input 'ID источника' 'Source ID' }; Run-Download $s }
+      '5' { $p = if ($GamePath) { $GamePath } else { Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Install $p $PackageManifest }
+      '6' { Run-Restore }
+      '7' { Set-Language }
+      default { Write-Host (T 'Неизвестный пункт.' 'Unknown menu item.') -ForegroundColor Yellow }
+    }
+  } catch [System.OperationCanceledException] {
+    Write-Host (T 'Операция отменена. Возврат в главное меню.' 'Operation cancelled. Returning to the main menu.') -ForegroundColor Yellow
+  } catch {
+    Write-Error $_
+  }
+}
 function Main {
-  if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $GamePath; return }
+  if ($Action -eq 'Check') { if (-not $GamePath) { $GamePath = Read-Input 'Укажите папку игры' 'Enter game folder' }; Run-Check $GamePath; return }
   if ($Action -eq 'Packages') { Run-Packages; return }
-  if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Host (T 'ID источника из sources.lock.json' 'Source ID from sources.lock.json') }; Run-Download $SourceId; return }
+  if ($Action -eq 'Download') { if (-not $SourceId) { $SourceId = Read-Input 'ID источника из sources.lock.json' 'Source ID from sources.lock.json' }; Run-Download $SourceId; return }
   if ($Action -eq 'Bootstrap') { Run-Bootstrap $GamePath $Method $null; return }
   if ($Action -eq 'Install') { if (-not $GamePath) { throw (T 'Для установки нужна папка игры.' 'Install requires a game folder.') }; Run-Install $GamePath $PackageManifest; return }
   if ($Action -eq 'Restore') { Run-Restore; return }
-  Write-Host ''; Write-Host 'DLSS5 Universal Installer' -ForegroundColor Cyan
-  Write-Host (T '1. Автоматическая установка' '1. Automatic installation')
-  Write-Host (T '2. Проверить игру' '2. Check game')
-  Write-Host (T '3. Проверить packages и SHA-256' '3. Inventory packages and SHA-256')
-  Write-Host (T '4. Скачать зафиксированный пакет' '4. Download a locked package')
-  Write-Host (T '5. Установка произвольного локального пакета' '5. Install a custom local package')
-  Write-Host (T '6. Восстановление выбранной установки' '6. Restore a selected installation')
-  Write-Host (T '7. Язык' '7. Language')
-  switch (Read-Host (T 'Выберите действие' 'Choose action')) {
-    '1' { Run-Bootstrap $GamePath $Method $null }
-    '2' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Check $p }
-    '3' { Run-Packages }
-    '4' { $s = if ($SourceId) { $SourceId } else { Read-Host (T 'ID источника' 'Source ID') }; Run-Download $s }
-    '5' { $p = if ($GamePath) { $GamePath } else { Read-Host (T 'Укажите папку игры' 'Enter game folder') }; Run-Install $p $PackageManifest }
-    '6' { Run-Restore }
-    '7' { Set-Language }
-    default { Write-Host (T 'Отмена.' 'Cancelled.') }
-  }
+  while ($true) { Invoke-Menu }
 }
 try { Main } catch { Write-Error $_; exit 1 }
+
+

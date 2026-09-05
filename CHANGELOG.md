@@ -13,3 +13,4 @@
 - Renamed the Bootstrap menu item to Automatic installation.
 - Restore now lets the user choose the game and installation manifest to revert.
 - Documented custom package and alternate-version installation through local manifests.
+- Added universal 0 cancellation at interactive prompts; cancelled operations return to the main menu without installing files.

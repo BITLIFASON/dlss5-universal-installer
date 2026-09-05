@@ -30,3 +30,7 @@ Only the specific files being changed are backed up. A full game copy is never c
 The automatic Bootstrap flow uses only the pinned versions in `config/sources.lock.json`. To install another version or an unlisted package, place the archive in `packages/` and create a package manifest that records its exact source, archive SHA-256, and every destination file SHA-256. Then choose **Install a custom local package** in the menu or run `-Action Install` with that manifest. The installer verifies the manifest and creates a point backup before changing the game; it does not download arbitrary URLs automatically.
 
 Shared settings are in `config/settings.json`: language, supported APIs, mandatory method comparison, elevation warning, local package preference, and the rule against deleting unknown files.
+
+At any interactive prompt, enter 0 to cancel the current operation and return to the main menu. The command-line actions remain non-interactive when all required parameters are supplied.
+
+

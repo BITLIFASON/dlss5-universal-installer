@@ -93,13 +93,32 @@ function Get-PeArchitecture([string]$Path) {
     return ('0x{0:X4}' -f $machine)
   } catch { return 'Unknown' }
 }
+function Get-ExecutableScore($Exe,[string]$Root) {
+  $score = 0
+  $name = $Exe.BaseName.ToLowerInvariant()
+  $relative = $Exe.FullName.Substring($Root.Length).TrimStart('\').ToLowerInvariant()
+  if ($relative -match '\\binaries\\win64\\') { $score += 100 }
+  if ($name -match 'shipping|game|client') { $score += 50 }
+  if ($name -match 'launcher|crash|unins|setup|updater|redist') { $score -= 100 }
+  if ($Exe.Length -gt 50MB) { $score += 20 }
+  return $score
+}
+function Test-TechnicalExecutable($Exe,[string]$Root) {
+  $name = $Exe.BaseName.ToLowerInvariant()
+  $relative = $Exe.FullName.Substring($Root.Length).TrimStart('\').ToLowerInvariant()
+  if ($relative -match '\\engine\\binaries\\|\\editor\\') { return $true }
+  if ($name -match 'unrealcefsubprocess|crashreportclient|shadercompileworker|unrealeditor|ue4editor|unitycrashhandler|unitylicensingclient|automationtool|dedicatedserver') { return $true }
+  if ($name -match '(-editor|-server)$') { return $true }
+  return $false
+}
 function Find-GameExecutables([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path -PathType Container)) { throw (T 'Папка игры не найдена.' 'Game folder was not found.') }
   $items = @(Get-ChildItem -LiteralPath $Path -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch '\\(redist|support|tools|crash|_commonredist)\\' } |
+    Where-Object { $_.FullName -notmatch '\\(redist|support|tools|crash|_commonredist)\\' -and -not (Test-TechnicalExecutable $_ $Path) } |
     Sort-Object Length -Descending)
   if ($items.Count -eq 0) { throw (T 'В папке не найден EXE.' 'No executable was found in the folder.') }
-  return @($items | Select-Object -First 20)
+  foreach ($item in $items) { Add-Member -InputObject $item -NotePropertyName candidateScore -NotePropertyValue (Get-ExecutableScore $item $Path) -Force }
+  return @($items | Sort-Object candidateScore,Length -Descending | Select-Object -First 20)
 }
 function Get-GameInspection([string]$Path) {
   $resolved = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
@@ -113,13 +132,26 @@ function Get-GameInspection([string]$Path) {
     gamePath = $resolved
     primaryExecutable = $executables[0].FullName
     primaryArchitecture = Get-PeArchitecture $executables[0].FullName
-    executables = @($executables | ForEach-Object { [ordered]@{ path = $_.FullName; size = $_.Length; architecture = Get-PeArchitecture $_.FullName } })
+    executables = @($executables | ForEach-Object { [ordered]@{ path = $_.FullName; size = $_.Length; architecture = Get-PeArchitecture $_.FullName; candidateScore = $_.candidateScore } })
     apiHint = $apiHint
     nativeDlssDetected = ($dlss.Count -gt 0)
     dlssFiles = @($dlss | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     proxyFiles = @($proxy | ForEach-Object { Get-RelativePath $resolved $_.FullName })
     fileCount = $files.Count
   }
+}
+function Select-Executable($Info) {
+  $candidates = @($Info.executables)
+  if ($candidates.Count -eq 1) { return [string]$candidates[0].path }
+  Write-Host ''; Write-Host (T 'Кандидаты EXE для установки:' 'Executable candidates for installation:') -ForegroundColor Cyan
+  for ($i = 0; $i -lt $candidates.Count; $i++) {
+    $candidate = $candidates[$i]
+    Write-Host ("{0}. {1} | {2} | score={3}" -f ($i + 1),$candidate.path,$candidate.architecture,$candidate.candidateScore)
+  }
+  $choice = Read-Input 'Выберите номер EXE' 'Choose the executable number'
+  $index = 0
+  if (-not [int]::TryParse($choice,[ref]$index) -or $index -lt 1 -or $index -gt $candidates.Count) { throw (T 'Некорректный номер EXE.' 'Invalid executable number.') }
+  return [string]$candidates[$index - 1].path
 }
 function Show-MethodComparison($Info) {
   Write-Host ''; Write-Host (T 'Сравнение методов:' 'Method comparison:') -ForegroundColor Cyan
@@ -261,14 +293,15 @@ function Ensure-Admin([string]$InstallGamePath,[string]$ManifestPath) {
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $args | Out-Null
   return $false
 }
-function Run-Install([string]$Path,[string]$ManifestPath) {
+function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath) {
   if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $info = Get-GameInspection $game
   Show-MethodComparison $info
+  if (-not $ExecutablePath) { $ExecutablePath = Select-Executable $info }
   $manifest = Get-PackageManifest (Resolve-Path -LiteralPath $ManifestPath).Path
   $installRoot = $game
-  if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $info.primaryExecutable }
+  if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $ExecutablePath }
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
   if ((Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   if (-not (Ensure-Admin $installRoot $ManifestPath)) { return }
@@ -311,7 +344,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
   $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный manifest метода не найден.' 'Prepared method manifest was not found.') }
-  $exe = $info.primaryExecutable
+  $exe = Select-Executable $info
   if ($SelectedMethod -eq 'OptiScaler') {
     $archive = Ensure-LockedDownload 'optiscaler'
     Copy-Item -LiteralPath $archive -Destination (Join-Path $Dirs.Packages (Split-Path $archive -Leaf)) -Force
@@ -324,7 +357,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api) {
     $p = Start-Process -FilePath $reshade -ArgumentList @('--headless','--api',$Api,$exe) -Wait -PassThru
     if ($p.ExitCode -ne 0) { throw ("ReShade setup failed with exit code {0}" -f $p.ExitCode) }
   }
-  Run-Install $Path $manifestPath
+  Run-Install $Path $manifestPath $exe
 }
 function Run-Restore {
   $items = Get-InstalledPackageManifest

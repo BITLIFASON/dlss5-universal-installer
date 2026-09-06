@@ -6,6 +6,8 @@ This document covers the portable tool itself. The root [README](../README.md) i
 
 Run `DLSS5-Universal.cmd` and choose **Automatic installation**. The wizard asks for a game folder, filters common technical executables, lets you select the real game EXE, compares the three methods, downloads pinned sources, verifies SHA-256, creates a point backup, and installs the selected package.
 
+Start with a clean game directory. Existing mod managers, manual DLL replacements, ReShade, OptiScaler, frame-generation wrappers, and other installers can leave untracked files or conflicting proxy DLLs. The utility only backs up files it replaces and never creates a full game copy, so it cannot guarantee a complete rollback of a game modified before tracking began.
+
 Use `0` at any interactive prompt to cancel the current operation and return to the main menu. Use **Settings** to change language, interface mode, automatic-download policy, or the elevation warning. Use **Exit** to close the utility.
 
 ## Read-only inspection

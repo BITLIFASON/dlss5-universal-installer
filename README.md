@@ -45,6 +45,10 @@ The tracked defaults are English, Simple interface, locked automatic downloads e
 
 Enter `0` at any interactive prompt to cancel the current operation and return to the main menu. Use **Settings** to change language, interface mode, download policy, or elevation warnings.
 
+### Start from a clean game
+
+Use a clean game directory for the first installation. Previous mod managers, manual DLL swaps, ReShade, OptiScaler, frame-generation wrappers, and other third-party installers may leave files that this utility cannot identify or restore. Installing on top of them can cause proxy conflicts, crashes, missing effects, or an incomplete rollback. The installer creates point backups for files it replaces, but it does not create a full game backup and cannot recover an original DLL that was overwritten before the utility started tracking it.
+
 ## 🎮 In-game verification
 
 After installation, compare the same save, scene, settings, and camera position:
@@ -58,7 +62,7 @@ After installation, compare the same save, scene, settings, and camera position:
 
 ## ↩️ Restore
 
-Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. If a file changed after installation, the tool warns before overwriting it. Only files recorded by that installation are restored or removed; a full game copy is never created. An untracked cleanup snapshot can restore the manual components it saved, but cannot restore game DLL originals that were overwritten before the snapshot.
+Choose **Restore a selected installation** to see the latest active record for each game and the number of tracked installation layers. If a file changed after installation, the tool warns before overwriting it. When several layers belong to one game, choose between restoring the selected layer and fully returning to the state before the first tracked layer. Only files recorded by the utility are restored or removed; a full game copy is never created. An untracked cleanup snapshot can restore the manual components it saved, but cannot restore game DLL originals that were overwritten before the snapshot.
 
 ## ✨ Features
 
@@ -69,6 +73,7 @@ Choose **Restore a selected installation** to see recorded game paths, package v
 - SHA-256 verification for downloads and staged files;
 - conflict report and dry-run installation plan;
 - point backups and manifest-based restore;
+- clean-game prerequisite warnings and conflict checks for existing injectors;
 - Simple and Advanced inspection views;
 - English and Russian interactive UI;
 - `0` cancellation at every interactive prompt;
@@ -162,6 +167,8 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 
 - Sources must use HTTPS and a pinned SHA-256;
 - point backups are created before replacing existing files;
+- a clean game directory is strongly recommended before the first installation;
+- installations over mod managers, manual DLL swaps, ReShade, OptiScaler, or other injectors can fail or leave an incomplete rollback;
 - unknown existing DLLs are not removed automatically;
 - administrator elevation shows a warning first;
 - ReShade is the only third-party installer launched automatically, and only from the pinned Bootstrap source;

@@ -2,6 +2,10 @@
 
 Use this order when a setup does not behave as expected.
 
+## The game was already modified by another installer
+
+Stop and return to a clean game directory before comparing methods. Remove or restore the previous mod manager profile, ReShade hook, OptiScaler proxy, frame-generation wrapper, and manual DLL changes using that tool's documented procedure. The installer can warn about common conflicts, but it cannot reconstruct unknown files or guarantee a complete rollback of changes made before its own manifest and point backup existed.
+
 ## The wrong executable was detected
 
 Run `Check` again and inspect the executable candidates. During installation, choose the real game executable, usually the large `*-Shipping.exe` inside a `Binaries\Win64` directory for Unreal Engine games. Do not select editor, crash reporter, shader compiler, launcher, or server binaries.

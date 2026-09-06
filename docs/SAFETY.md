@@ -5,6 +5,9 @@ This is an experimental project for personal use. Bugs, game-specific incompatib
 - Packages in `packages` are unverified until their source, version, and SHA-256 are recorded.
 - The tool does not automatically run third-party `.exe`, `.bat`, or `.cmd` files from archives, except for the explicitly pinned ReShade installer used by Bootstrap.
 - A point backup of only the files being replaced is created before changing a game.
+- A clean game directory is strongly recommended before the first install. Existing mod managers, manual DLL swaps, ReShade, OptiScaler, frame-generation wrappers, and other injectors may conflict with the selected method or leave files that this utility cannot identify.
+- Installing over an already modified game can fail, crash, show no visual effect, or produce an incomplete rollback. A point backup cannot recover an original DLL that was overwritten before the utility started tracking it.
 - Unknown DLLs are not deleted when a profile is removed.
 - Administrator rights are not requested silently; the tool shows a warning first.
+- A successful installation means that the declared files were downloaded, hash-checked, copied, and recorded. It does not prove that the game will render correctly; black screens, missing effects, artifacts, and performance changes still depend on the game, renderer, driver, and selected in-game settings.
 - Online games with anti-cheat are outside the scope of this utility.

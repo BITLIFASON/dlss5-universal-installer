@@ -1,4 +1,4 @@
-# ⚡ DLSS5 Universal Installer
+# DLSS 5 Universal Installer
 
 ### A portable, verification-first installer for community DLSS5 integrations on Windows games
 
@@ -21,6 +21,7 @@ Choose a game, inspect its real executable, select an integration method, downlo
 - [✨ Features](#-features)
 - [🎮 Installation methods](#-installation-methods)
 - [📊 Compatibility](#-compatibility)
+- [⚠️ Known limitations](#️-known-limitations)
 - [🧰 Custom packages and versions](#-custom-packages-and-versions)
 - [🔬 How it works](#-how-it-works)
 - [🛠️ Troubleshooting](#️-troubleshooting)
@@ -37,38 +38,47 @@ Choose a game, inspect its real executable, select an integration method, downlo
 3. Select **Automatic installation**.
 4. Enter the game path, or type `1` to open the Windows folder picker.
 5. Review the executable candidates and choose the real game executable. Avoid launchers, editors, crash reporters, and dedicated servers.
-6. Select Native/Bridge, OptiScaler, or ReShade + Feeder.
+6. Select Native/Bridge, OptiScaler Bridge + DLSS5, or ReShade + Feeder.
 7. Review the conflict report and installation plan, then confirm.
 8. Start the game and follow [In-game verification](#-in-game-verification).
+
+The installer marks a setup complete after the declared files pass hash checks and are recorded. It cannot guarantee a usable image for every game or renderer; if the game shows a black screen or crashes, close it and use **Restore a selected installation**.
 
 The tracked defaults are English, Simple interface, locked automatic downloads enabled, elevation warnings enabled, and unknown-file deletion disabled. Personal changes are saved to ignored `config/settings.local.json`.
 
 Enter `0` at any interactive prompt to cancel the current operation and return to the main menu. Use **Settings** to change language, interface mode, download policy, or elevation warnings.
 
+### Start from a clean game
+
+Use a clean game directory for the first installation. Previous mod managers, manual DLL swaps, ReShade, OptiScaler, frame-generation wrappers, and other third-party installers may leave files that this utility cannot identify or restore. Installing on top of them can cause proxy conflicts, crashes, missing effects, or an incomplete rollback. The installer creates point backups for files it replaces, but it does not create a full game backup and cannot recover an original DLL that was overwritten before the utility started tracking it.
+
 ## 🎮 In-game verification
 
 After installation, compare the same save, scene, settings, and camera position:
 
-1. Launch the game normally and load the test save.
-2. Wait about 30 seconds, then check the same view with the camera still and moving.
-3. Record native FPS, displayed FPS with frame generation, and whether you see ghosting, flicker, broken UI, or stutter.
-4. Play briefly in a busy area. If the image or stability is worse, restore the installation.
+1. Open the game graphics settings and enable the upscaler or render path required by the selected method. Keep the same resolution and quality preset, and disable dynamic resolution while comparing.
+2. Launch the game normally and load the test save.
+3. For ReShade + Feeder, press `Home` and enable the selected LumeniteFX provider and `DLSS 5 Feed` in the documented order.
+4. Wait about 30 seconds, then check the same view with the camera still and moving.
+5. Record native FPS, displayed FPS with frame generation, and whether you see ghosting, flicker, broken UI, or stutter.
+6. Play briefly in a busy area. If the image or stability is worse, restore the installation.
 
 `Home` is the usual ReShade overlay key. Other hotkeys are preset-dependent and are not guaranteed by this installer. Do not stack methods. See the [full verification checklist](docs/IN-GAME-VERIFICATION.md).
 
 ## ↩️ Restore
 
-Choose **Restore a selected installation** to see recorded game paths, package versions, and installation manifests. Select the entry to revert. If a file changed after installation, the tool warns before overwriting it. Only files recorded by that installation are restored or removed; a full game copy is never created. An untracked cleanup snapshot can restore the manual components it saved, but cannot restore game DLL originals that were overwritten before the snapshot.
+Choose **Restore a selected installation** to see the latest active record for each game and the number of tracked installation layers. If a file changed after installation, the tool warns before overwriting it. When several layers belong to one game, choose between restoring the selected layer and fully returning to the state before the first tracked layer. Only files recorded by the utility are restored or removed; a full game copy is never created. An untracked cleanup snapshot can restore the manual components it saved, but cannot restore game DLL originals that were overwritten before the snapshot.
 
 ## ✨ Features
 
 - One-click Bootstrap flow for pinned upstream releases;
-- Native/Bridge, OptiScaler, and ReShade + Feeder methods;
+- Native/Bridge, OptiScaler Bridge + DLSS5, and ReShade + Feeder methods;
 - executable candidate scoring with Unreal/Unity technical-process filtering;
 - Windows Explorer folder picker and manual path input;
 - SHA-256 verification for downloads and staged files;
 - conflict report and dry-run installation plan;
 - point backups and manifest-based restore;
+- clean-game prerequisite warnings and conflict checks for existing injectors;
 - Simple and Advanced inspection views;
 - English and Russian interactive UI;
 - `0` cancellation at every interactive prompt;
@@ -77,17 +87,17 @@ Choose **Restore a selected installation** to see recorded game paths, package v
 
 ## 🎮 Installation methods
 
-| Method | Best fit | Trade-off |
-|---|---|---|
-| **Native/Bridge** | Games that already ship with native DLSS | Usually the lowest overhead; requires a compatible native path |
-| **OptiScaler** | Games whose upscaler path can be redirected | Broad compatibility; proxy DLL conflicts are possible |
-| **ReShade + Feeder** | Games without native DLSS when depth/motion data is available | Broadest route; usually costs more FPS and may need per-game tuning |
+| Method | Use when | What it requires | Main limitation |
+|---|---|---|---|
+| **Native/Bridge** | The game already provides native DLSS | A compatible native DLSS path and the correct renderer | Usually the lowest overhead, but it cannot help games without usable native DLSS |
+| **OptiScaler Bridge + DLSS5** | The game exposes a working FSR or XeSS input | Correct proxy loading order, matching API, and game-specific configuration | Experimental; may conflict with other proxy DLLs, fail to initialize, or show no usable image |
+| **ReShade + Feeder** | The game can provide depth and motion data to ReShade | ReShade add-on support, one motion-vector provider, and the correct effect order | Broadest route, but usually costs more FPS and needs per-game tuning |
 
 The installer treats these methods as alternatives. Restore the selected installation before switching methods.
 
 ## 📊 Compatibility
 
-| Target | Native/Bridge | OptiScaler | ReShade + Feeder | Status |
+| Target | Native/Bridge | OptiScaler Bridge + DLSS5 | ReShade + Feeder | Status |
 |---|---:|---:|---:|---|
 | DirectX 11 x64 | Candidate | Candidate | Candidate | Verify per game |
 | DirectX 12 x64 | Candidate | Candidate | Candidate | Verify per game |
@@ -95,7 +105,15 @@ The installer treats these methods as alternatives. Restore the selected install
 | Vulkan / OpenGL | Not implemented | Not implemented | Not implemented | Out of scope |
 | Online anti-cheat games | Not a target | Not a target | Not a target | Check game rules |
 
-See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits.
+See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits. The exact post-install steps for each method are in the [method guide](docs/METHODS.md).
+
+## ⚠️ Known limitations
+
+- **API detection is a hint, not proof.** When a game exposes both DX11 and DX12 indicators, the user must confirm the renderer used at launch. Selecting the wrong path can install a technically valid but unusable combination.
+- **Validation is limited.** The repository has static checks and selected game tests, not a complete compatibility matrix or automated test for every fresh install, reinstall, rollback, renderer, and driver combination.
+- **Pre-existing modifications are outside the restore guarantee.** Unknown DLLs and files left by other mod managers or manual installers may conflict with the selected method and cannot always be reconstructed.
+- **32-bit game support is not confirmed.** The current packages and ReShade/add-on flow primarily target 64-bit games; legacy x86 games may require separate components.
+- **A point backup is not a full game backup.** Keep an independent backup or a clean game copy before experimenting with injection methods.
 
 ## 🧰 Custom packages and versions
 
@@ -148,6 +166,7 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 | Document | Purpose |
 |---|---|
 | [Portable tool guide](docs/README.md) | Actions, profiles, settings, and operating flow |
+| [Method guide](docs/METHODS.md) | What to select in-game and configure after each installation method |
 | [In-game verification](docs/IN-GAME-VERIFICATION.md) | Repeatable visual, FPS, stability, and rollback checks |
 | [Components and sources](docs/COMPONENTS.md) | Pinned versions, official upstream links, and file groups |
 | [Compatibility matrix](docs/COMPATIBILITY.md) | Supported APIs, methods, and current boundaries |
@@ -162,6 +181,8 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 
 - Sources must use HTTPS and a pinned SHA-256;
 - point backups are created before replacing existing files;
+- a clean game directory is strongly recommended before the first installation;
+- installations over mod managers, manual DLL swaps, ReShade, OptiScaler, or other injectors can fail or leave an incomplete rollback;
 - unknown existing DLLs are not removed automatically;
 - administrator elevation shows a warning first;
 - ReShade is the only third-party installer launched automatically, and only from the pinned Bootstrap source;

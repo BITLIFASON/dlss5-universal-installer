@@ -1,14 +1,33 @@
 {
   "id": "dlss5-bridge",
-  "version": "1.4.12",
+  "version": "1.4.12+dlss5-1.2.5",
   "method": "NativeBridge",
   "installRelativeTo": "primaryExecutableDirectory",
-  "source": "https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12",
+  "source": "https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12 + https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5",
   "files": [
     {
       "path": "dlss5-bridge.addon64",
+      "sourcePath": "files/dlss5-bridge.addon64",
+      "installWhenApi": ["dxgi", "d3d11", "vulkan"],
       "sha256": "4f2acecc1026ae89ac0b92767be66ceea2662ad0ef88710b89c7da7840d548d4"
+    },
+    {
+      "path": "nvngx_dlssnr.dll",
+      "sourcePath": "files/nvngx_dlssnr.dll",
+      "sha256": "dcc0dc2414aedec4a8e084647070383be068554042587180c20c784d4772d36f"
+    },
+    {
+      "path": "renodx-dlss5.addon64",
+      "sourcePath": "files/renodx-dlss5.addon64",
+      "sha256": "87aef9ddd937c7241e6bf8d8efea0045d63559135e254c60dab316db3d3a4aee"
+    },
+    {
+      "path": "nvngx_dlss.dll",
+      "sourcePath": "files/nvngx_dlss.dll",
+      "sourceFromGame": true,
+      "installWhenApi": ["d3d11", "vulkan"],
+      "sha256": "d202b024cf5a809d4f6cb57b698ca61cdf7e7f664915a3794942042066d7cf72"
     }
   ],
-  "sourcePackage": "dlss5-bridge"
+  "sourcePackage": "dlss5-native-bridge"
 }

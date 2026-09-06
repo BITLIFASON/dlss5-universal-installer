@@ -7,13 +7,13 @@
     ],
     "notes": "Intercepts the game native DLSS path; usually adds minimal overhead."
   },
-  "OptiScaler": {
-    "label_ru": "OptiScaler",
-    "label_en": "OptiScaler",
+  "OptiBridge": {
+    "label_ru": "OptiScaler Bridge + DLSS5",
+    "label_en": "OptiScaler Bridge + DLSS5",
     "requires": [
       "dx11_or_dx12"
     ],
-    "notes": "Replaces or intercepts the upscaler path; proxy DLL conflicts are possible."
+    "notes": "Routes an in-game FSR/XeSS input into DLSS5 through OptiScaler; proxy DLL conflicts are possible."
   },
   "Feeder": {
     "label_ru": "ReShade + Feeder",

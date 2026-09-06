@@ -6,18 +6,22 @@ Installation is allowed only for a package already present in `packages` and des
 {
   "id": "example-method",
   "version": "1.0.0",
-  "method": "OptiScaler",
+  "method": "OptiBridge",
   "archive": "example-method.zip",
   "installRelativeTo": "primaryExecutableDirectory",
   "sha256": "<archive sha256>",
   "source": "https://official-source/release",
   "files": [
-    { "path": "dxgi.dll", "sourcePath": "OptiScaler.dll", "sha256": "<extracted file sha256>" }
+    { "path": "version.dll", "sourcePath": "OptiScaler\\OptiScaler.dll", "sha256": "<extracted file sha256>" },
+    { "path": "nvngx_dlssnr.dll", "sourcePath": "DLSS5-AIO\\02-DLSS5-Neural-Rendering\\nvngx_dlssnr.dll", "sha256": "<extracted file sha256>" },
+    { "path": "renodx-dlss5.addon64", "sourcePath": "DLSS5-AIO\\02-DLSS5-Neural-Rendering\\renodx-dlss5.addon64", "sha256": "<extracted file sha256>" }
   ]
 }
 ```
 
-`path` is the destination path inside the game folder. Optional `sourcePath` is the file path inside the archive; this makes an explicit mapping such as `OptiScaler.dll` to `dxgi.dll` auditable.
+`path` is the destination path inside the game folder. Optional `sourcePath` is the file path inside the prepared source; this makes an explicit mapping such as `OptiScaler.dll` to `version.dll` auditable.
+
+Optional `installWhenApi` limits an entry to the selected renderer (`dxgi`, `d3d11`, `d3d12`, or `vulkan`). Use this when a native DX12 path must not receive a DX11/Vulkan bridge. `sourceFromGame` marks a file that is selected from the game's own files; the installer still verifies the staged bytes and records the point backup before copying it beside the executable.
 
 `source` records provenance for auditing. A public archive alone is not proof of safety. Until a manifest exists, the tool can only inventory and hash a package; it cannot install it.
 

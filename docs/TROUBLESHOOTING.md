@@ -2,6 +2,10 @@
 
 Use this order when a setup does not behave as expected.
 
+## The game was already modified by another installer
+
+Stop and return to a clean game directory before comparing methods. Remove or restore the previous mod manager profile, ReShade hook, OptiScaler proxy, frame-generation wrapper, and manual DLL changes using that tool's documented procedure. The installer can warn about common conflicts, but it cannot reconstruct unknown files or guarantee a complete rollback of changes made before its own manifest and point backup existed.
+
 ## The wrong executable was detected
 
 Run `Check` again and inspect the executable candidates. During installation, choose the real game executable, usually the large `*-Shipping.exe` inside a `Binaries\Win64` directory for Unreal Engine games. Do not select editor, crash reporter, shader compiler, launcher, or server binaries.
@@ -11,10 +15,13 @@ Run `Check` again and inspect the executable candidates. During installation, ch
 1. Close the game and launcher.
 2. Run the utility and choose **Restore a selected installation**.
 3. Select the matching game path and package version.
-4. Confirm that the game starts without the package.
-5. Check for another proxy DLL or injector in the game directory before trying a different method.
+4. If the game has several tracked installation layers, choose **full restore** to return to the state before the first tracked layer.
+5. Confirm that the game starts without the package.
+6. Check for another proxy DLL or injector in the game directory before trying a different method.
 
 The utility restores only files recorded by its installation manifest. It does not delete unrelated files.
+
+The installer cannot validate the game's final backbuffer or image output. A black screen after a completed file installation is a runtime compatibility problem: close the game, restore the selected installation, and report the renderer, executable, method, and log if the issue is reproducible.
 
 ## The image is unchanged
 
@@ -32,6 +39,8 @@ Common causes are a missing package archive, a manifest mismatch, or a SHA-256 m
 The game folder may not be writable by the current process. The utility shows a warning before elevation. Accept it only when the selected game path and package are correct.
 
 ## ReShade installation fails
+
+If the ReShade setup exits with code `1`, check the API selected by the wizard. When the executable does not expose a reliable API hint, the wizard offers **DXGI** (recommended for DirectX 10/11/12) and a direct D3D12 hook. Use DXGI first for the Bridge method; the failed attempt is rolled back and does not count as a completed installation.
 
 If the game already has ReShade or a proxy DLL, the wizard offers three choices: reinstall over it, remove the detected hook, configuration, and known DLSS5 add-on files, or cancel. Before removal it asks whether the installation came from this utility. If a matching manifest exists, removal is refused and you are directed to **Restore**. If the manifest is missing, the tool warns that old backup folders may be incomplete. Before removal, it creates a point snapshot and adds it to **Restore**. That snapshot can restore the manual components, but it cannot recover original game files that were overwritten before the snapshot. The `reshade-shaders` folder, unknown DLLs, and `nvngx_dlss.dll` are left untouched. Confirm that the selected executable is the actual game process and that the pinned ReShade Add-on installer was downloaded successfully.
 
@@ -57,6 +66,10 @@ The installer repairs these paths after its ReShade step. Restart the game, open
 A successful ReShade injection alone is not enough. Feeder also needs one motion-vector provider. The automatic Feeder profile installs the pinned LumeniteFX Kernel and creates a preset with `Lumenite_Kernel` above `DLSS5_Feed`. Do not treat the installation as working until both techniques are enabled and the log reports non-zero motion vectors.
 
 The installer offers only two LumeniteFX providers: **Kernel** (`DLSS5_MV_PROVIDER=3`) and **QuantMotion** (`DLSS5_MV_PROVIDER=4`). Enable the selected Lumenite technique above `DLSS5_Feed`; do not enable both at once.
+
+## OptiScaler Bridge + DLSS5 reports a proxy conflict
+
+OptiScaler Bridge + DLSS5 uses a proxy alongside ReShade and the DLSS5 add-on. Start with a clean game directory and restore any previous installation before trying the bridge. The game must expose an FSR or XeSS input; selecting DLSS as the game input bypasses the bridge route. If the files are untracked, the wizard warns that original game DLLs overwritten before the snapshot cannot be recovered.
 
 ## Grey walls look soft or smear while the camera moves
 

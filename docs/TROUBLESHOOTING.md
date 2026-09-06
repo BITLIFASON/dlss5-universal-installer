@@ -11,8 +11,9 @@ Run `Check` again and inspect the executable candidates. During installation, ch
 1. Close the game and launcher.
 2. Run the utility and choose **Restore a selected installation**.
 3. Select the matching game path and package version.
-4. Confirm that the game starts without the package.
-5. Check for another proxy DLL or injector in the game directory before trying a different method.
+4. If the game has several tracked installation layers, choose **full restore** to return to the state before the first tracked layer.
+5. Confirm that the game starts without the package.
+6. Check for another proxy DLL or injector in the game directory before trying a different method.
 
 The utility restores only files recorded by its installation manifest. It does not delete unrelated files.
 
@@ -57,6 +58,10 @@ The installer repairs these paths after its ReShade step. Restart the game, open
 A successful ReShade injection alone is not enough. Feeder also needs one motion-vector provider. The automatic Feeder profile installs the pinned LumeniteFX Kernel and creates a preset with `Lumenite_Kernel` above `DLSS5_Feed`. Do not treat the installation as working until both techniques are enabled and the log reports non-zero motion vectors.
 
 The installer offers only two LumeniteFX providers: **Kernel** (`DLSS5_MV_PROVIDER=3`) and **QuantMotion** (`DLSS5_MV_PROVIDER=4`). Enable the selected Lumenite technique above `DLSS5_Feed`; do not enable both at once.
+
+## OptiScaler reports a ReShade conflict
+
+OptiScaler and ReShade both use proxy injection paths. Before an OptiScaler install, the wizard now offers to remove a detected ReShade hook and its known configuration files. It creates a point snapshot first and leaves the shader folder and unknown DLLs untouched. If the ReShade files belong to a tracked installation, restore that installation instead of deleting the hook. If the files are untracked, the wizard warns that original game DLLs overwritten before the snapshot cannot be recovered.
 
 ## Grey walls look soft or smear while the camera moves
 

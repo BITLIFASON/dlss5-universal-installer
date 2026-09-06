@@ -23,7 +23,7 @@ src\installer.ps1 -Action Install -GamePath "C:\Games\MyGame" -PackageManifest "
 src\installer.ps1 -Action Restore
 ```
 
-`Download` retrieves one locked source. GitHub URLs are generated from the pinned repository, tag, and asset filename in `config/sources.lock.json`; other sources keep a fixed `downloadUrl`. `Bootstrap` performs the complete automatic flow. `Install` works with a package manifest, including a custom version. `Restore` lists active installation manifests newest first, shows the local timestamp, and lets you choose which game to revert. After a successful restore, the record moves to `manifests/restored` so it is no longer offered as an active rollback.
+`Download` retrieves one locked source. GitHub URLs are generated from the pinned repository, tag, and asset filename in `config/sources.lock.json`; other sources keep a fixed `downloadUrl`. `Bootstrap` performs the complete automatic flow. `Install` works with a package manifest, including a custom version. `Restore` lists active installation manifests newest first, shows the local timestamp, and lets you choose which game to revert. When several tracked layers belong to the same game, Restore offers a selected-layer rollback or a full rollback to the state before the first tracked layer. Restored records move to `manifests/restored` so they are no longer offered as active rollbacks.
 
 **Clean generated manifests** removes `check-*` and `packages-*` records without another prompt. Installation and cleanup manifests are listed separately and require confirmation before deletion.
 

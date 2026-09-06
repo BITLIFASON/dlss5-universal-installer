@@ -507,6 +507,48 @@ function Archive-RestoredManifest([System.IO.FileInfo]$ManifestFile) {
   Move-Item -LiteralPath $ManifestFile.FullName -Destination $archivePath -Force
   return $archivePath
 }
+function Get-ManifestTimestamp($ManifestFile,$Record) {
+  if ($Record.timestamp) {
+    try { return [datetime]$Record.timestamp } catch { }
+  }
+  return $ManifestFile.LastWriteTimeUtc
+}
+function Get-RelatedInstallManifests($SelectedRecord) {
+  $gamePath = [string]$SelectedRecord.gamePath
+  $installRoot = if ($SelectedRecord.installRoot) { [string]$SelectedRecord.installRoot } else { $gamePath }
+  $related = @()
+  foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
+    try {
+      $record = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
+      $recordRoot = if ($record.installRoot) { [string]$record.installRoot } else { [string]$record.gamePath }
+      if ([string]$record.gamePath -eq $gamePath -and $recordRoot -eq $installRoot) {
+        $related += [pscustomobject]@{ File=$manifestFile; Record=$record; Timestamp=(Get-ManifestTimestamp $manifestFile $record) }
+      }
+    } catch { }
+  }
+  return @($related | Sort-Object Timestamp)
+}
+function Get-StackRestoreRecords($RelatedManifests,[bool]$Pristine) {
+  $recordsByPath = @{}
+  $ordered = if ($Pristine) { @($RelatedManifests | Sort-Object Timestamp) } else { @($RelatedManifests | Sort-Object Timestamp -Descending | Select-Object -First 1) }
+  foreach ($item in $ordered) {
+    foreach ($entry in @($item.Record.files)) {
+      $key = [string]$entry.path
+      if (-not $recordsByPath.ContainsKey($key)) { $recordsByPath[$key] = $entry }
+    }
+  }
+  return @($recordsByPath.Values)
+}
+function Get-LatestStackRecords($RelatedManifests) {
+  $recordsByPath = @{}
+  foreach ($item in @($RelatedManifests | Sort-Object Timestamp -Descending)) {
+    foreach ($entry in @($item.Record.files)) {
+      $key = [string]$entry.path
+      if (-not $recordsByPath.ContainsKey($key)) { $recordsByPath[$key] = $entry }
+    }
+  }
+  return @($recordsByPath.Values)
+}
 function Get-PreviousInstallRecord([string]$GamePath,[string]$InstallRoot,[string]$RelativePath) {
   foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
     try { $install = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json } catch { continue }
@@ -632,6 +674,30 @@ function Remove-DetectedReShade([string]$InstallRoot,$State) {
   Write-Log ("UNTRACKED_CLEANUP {0}; manifest={1}" -f $InstallRoot,$manifestPath)
   Write-Host (T 'Компоненты удалены. Точечная копия сохранена; Restore вернёт ручную установку, но не оригинальные файлы игры.' 'Components removed. A point snapshot was saved; Restore will bring back the manual installation, not the original game files.') -ForegroundColor Yellow
 }
+function Prepare-OptiScalerTarget([string]$InstallRoot) {
+  $state = Get-ReShadeState $InstallRoot
+  if (-not $state.installed) { return $true }
+  Write-Host (T 'Для OptiScaler обнаружен ReShade hook. Эти proxy-инжекторы нельзя безопасно тестировать одновременно.' 'A ReShade hook was detected for OptiScaler. These proxy injectors should not be tested together.') -ForegroundColor Yellow
+  Write-Host (T '1. Удалить обнаруженный ReShade hook и конфигурацию, сохранить точечную копию и продолжить OptiScaler' '1. Remove the detected ReShade hook and configuration, save a point snapshot, and continue with OptiScaler')
+  Write-Host (T '2. Отменить установку и вернуться в главное меню' '2. Cancel the installation and return to the main menu')
+  $choice = Read-Input 'Выберите действие' 'Choose an action'
+  if ($choice -ne '1') { return $false }
+  $tracked = @(Get-InstalledPackageManifest | Where-Object {
+    try {
+      $entry = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+      $root = if ($entry.installRoot) { [string]$entry.installRoot } else { [string]$entry.gamePath }
+      $root.Equals($InstallRoot,[StringComparison]::OrdinalIgnoreCase) -and @($entry.files | Where-Object { [string]$_.path -match '(?i)^(d3d12|dxgi)\.dll$|^ReShade(?:\.ini|\.log|Preset\.ini)$' }).Count -gt 0
+    } catch { $false }
+  })
+  if ($tracked.Count -gt 0) {
+    Write-Host (T 'Найдена отслеживаемая ReShade-установка. Сначала используйте Restore; удаление не выполняется.' 'A tracked ReShade installation was found. Use Restore first; no removal was performed.') -ForegroundColor Yellow
+    return $false
+  }
+  Write-Host (T 'Установка считается ручной или неотслеживаемой. Pristine backup отсутствует; заменённые игровые DLL этой операцией восстановить нельзя.' 'The installation is treated as manual or untracked. No pristine backup exists; this operation cannot restore replaced game DLLs.') -ForegroundColor Red
+  if ((Read-Input 'Удалить ReShade hook и конфигурацию? (y/n)' 'Remove the ReShade hook and configuration? (y/n)') -notmatch '^(y|yes|д|да)$') { return $false }
+  Remove-DetectedReShade $InstallRoot $state
+  return $true
+}
 function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executable,[string]$InstallRoot,[string]$BackupRoot,[bool]$Feeder = $false,[string]$Provider = 'Kernel') {
   $state = Get-ReShadeState $InstallRoot
   $forceReinstall = $false
@@ -744,6 +810,7 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
   if (-not $AlreadyConfirmed -and (Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   if (-not (Ensure-Admin $installRoot $ManifestPath $ExecutablePath)) { return }
+  if ($manifest.method -eq 'OptiScaler' -and -not (Prepare-OptiScalerTarget $installRoot)) { return }
   $stamp = if ($PreStamp) { $PreStamp } else { Get-Date -Format 'yyyyMMdd-HHmmss' }
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
@@ -861,8 +928,19 @@ function Run-Restore {
   $game = [string]$install.gamePath
   $installRoot = if ($install.installRoot) { [string]$install.installRoot } else { $game }
   if (-not (Test-Path -LiteralPath $game -PathType Container)) { throw (T 'Папка игры из манифеста не найдена.' 'Game folder from manifest was not found.') }
+  $related = Get-RelatedInstallManifests $install
+  $fullRestore = $false
+  if ($related.Count -gt 1) {
+    Write-Host ''; Write-Host ((T 'Для этой игры найдено связанных установочных слоёв: {0}.' 'Related installation layers found for this game: {0}.') -f $related.Count) -ForegroundColor Yellow
+    Write-Host (T '1. Откатить только выбранный слой' '1. Restore only the selected layer')
+    Write-Host (T '2. Полностью вернуть состояние до первой отслеживаемой установки' '2. Fully restore the state from before the first tracked installation')
+    $restoreMode = Read-Input 'Режим отката (1-2)' 'Restore mode (1-2)'
+    if ($restoreMode -eq '2') { $fullRestore = $true } elseif ($restoreMode -ne '1') { throw (T 'Некорректный режим отката.' 'Invalid restore mode.') }
+  }
+  $restoreEntries = if ($fullRestore) { Get-StackRestoreRecords $related $true } else { @($install.files) }
+  $latestEntries = if ($fullRestore) { Get-LatestStackRecords $related } else { @($install.files) }
   $conflicts = @()
-  foreach ($entry in @($install.files)) {
+  foreach ($entry in $latestEntries) {
     if (-not $entry.installedSha256) { continue }
     $destination = Join-Path $installRoot ([string]$entry.path)
     if (Test-Path -LiteralPath $destination -PathType Leaf) {
@@ -875,15 +953,22 @@ function Run-Restore {
     if ((Read-Input 'Продолжить откат и перезаписать их? (y/n)' 'Continue restore and overwrite them? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   }
   if (-not (Ensure-Admin $game $selected.FullName)) { return }
-  foreach ($entry in @($install.files)) {
+  foreach ($entry in $restoreEntries) {
     $destination = Join-Path $installRoot ([string]$entry.path)
     if ($entry.existed -and (Test-Path -LiteralPath $entry.backup -PathType Leaf)) { Copy-Item -LiteralPath $entry.backup -Destination $destination -Force }
     elseif (-not $entry.existed -and (Test-Path -LiteralPath $destination -PathType Leaf)) { Remove-Item -LiteralPath $destination -Force }
   }
-  Write-Log ("RESTORE {0}; source={1}" -f $game,$selected.FullName)
-  $archived = Archive-RestoredManifest $selected
-  Write-Log ("RESTORE_ARCHIVED {0}" -f $archived)
-  Write-Host (T 'Откат завершён. Запись перемещена в архив восстановленных установок.' 'Restore completed. The record was moved to the restored-installations archive.') -ForegroundColor Green
+  if ($fullRestore) {
+    $archived = @($related | ForEach-Object { Archive-RestoredManifest $_.File })
+    Write-Log ("RESTORE_FULL {0}; layers={1}" -f $game,$related.Count)
+    $archived | ForEach-Object { Write-Log ("RESTORE_ARCHIVED {0}" -f $_) }
+    Write-Host (T 'Полный откат завершён. Все связанные записи перемещены в архив восстановленных установок.' 'Full restore completed. All related records were moved to the restored-installations archive.') -ForegroundColor Green
+  } else {
+    Write-Log ("RESTORE {0}; source={1}" -f $game,$selected.FullName)
+    $archived = Archive-RestoredManifest $selected
+    Write-Log ("RESTORE_ARCHIVED {0}" -f $archived)
+    Write-Host (T 'Откат выбранного слоя завершён. Запись перемещена в архив восстановленных установок.' 'Selected-layer restore completed. The record was moved to the restored-installations archive.') -ForegroundColor Green
+  }
 }
 function Set-Language {
   $value = Read-Input 'Язык (ru/en)' 'Language (ru/en)'

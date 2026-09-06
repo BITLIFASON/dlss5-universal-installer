@@ -56,4 +56,6 @@
 - Switched the default Feeder profile to conservative per-pixel validation and raised the static-surface contrast threshold after the experimental geometry fit remained soft on moving camera views.
 - Added an explicit LumeniteFX provider choice limited to Kernel or QuantMotion, and updated the pinned Feeder payload to upstream v0.13.1-beta.1 with SHA-256 verification.
 - Clarified that missing automatic FSR/XeSS detection is an OptiScaler compatibility warning and does not block an intentional test selection.
+- Added an OptiScaler preflight that detects ReShade hooks, offers tracked restore or point-backed cleanup, and prevents the two proxy injection methods from being tested together.
+- Reworked Restore for repeated installs: it now distinguishes selected-layer rollback from full rollback of all related layers, archives restored records, and explains the choice before changing files.
 - Improved Restore selection: active records are sorted by manifest timestamp, show local date and time, label the latest record per game and local test records, and move successfully restored manifests into `manifests/restored`.

@@ -87,11 +87,11 @@ Choose **Restore a selected installation** to see the latest active record for e
 
 ## 🎮 Installation methods
 
-| Method | Best fit | Trade-off |
-|---|---|---|
-| **Native/Bridge** | Games that already ship with native DLSS | Usually the lowest overhead; requires a compatible native path |
-| **OptiScaler Bridge + DLSS5** | Games with FSR/XeSS input when a proxy bridge is appropriate | Routes FSR/XeSS into DLSS5; proxy DLL conflicts are possible |
-| **ReShade + Feeder** | DLSS5 neural rendering when depth/motion data is available | Complete DLSS5 payload; usually costs more FPS and may need per-game tuning |
+| Method | Use when | What it requires | Main limitation |
+|---|---|---|---|
+| **Native/Bridge** | The game already provides native DLSS | A compatible native DLSS path and the correct renderer | Usually the lowest overhead, but it cannot help games without usable native DLSS |
+| **OptiScaler Bridge + DLSS5** | The game exposes a working FSR or XeSS input | Correct proxy loading order, matching API, and game-specific configuration | Experimental; may conflict with other proxy DLLs, fail to initialize, or show no usable image |
+| **ReShade + Feeder** | The game can provide depth and motion data to ReShade | ReShade add-on support, one motion-vector provider, and the correct effect order | Broadest route, but usually costs more FPS and needs per-game tuning |
 
 The installer treats these methods as alternatives. Restore the selected installation before switching methods.
 
@@ -109,7 +109,6 @@ See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance a
 
 ## ⚠️ Known limitations
 
-- **OptiScaler Bridge + DLSS5 is experimental.** It depends on the game's actual FSR/XeSS path, proxy loading order, renderer, and per-game configuration. It may fail to initialize, show a black or corrupted frame, crash, or produce no visible improvement.
 - **API detection is a hint, not proof.** When a game exposes both DX11 and DX12 indicators, the user must confirm the renderer used at launch. Selecting the wrong path can install a technically valid but unusable combination.
 - **Validation is limited.** The repository has static checks and selected game tests, not a complete compatibility matrix or automated test for every fresh install, reinstall, rollback, renderer, and driver combination.
 - **Pre-existing modifications are outside the restore guarantee.** Unknown DLLs and files left by other mod managers or manual installers may conflict with the selected method and cannot always be reconstructed.

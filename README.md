@@ -53,10 +53,12 @@ Use a clean game directory for the first installation. Previous mod managers, ma
 
 After installation, compare the same save, scene, settings, and camera position:
 
-1. Launch the game normally and load the test save.
-2. Wait about 30 seconds, then check the same view with the camera still and moving.
-3. Record native FPS, displayed FPS with frame generation, and whether you see ghosting, flicker, broken UI, or stutter.
-4. Play briefly in a busy area. If the image or stability is worse, restore the installation.
+1. Open the game graphics settings and enable the upscaler or render path required by the selected method. Keep the same resolution and quality preset, and disable dynamic resolution while comparing.
+2. Launch the game normally and load the test save.
+3. For ReShade + Feeder, press `Home` and enable the selected LumeniteFX provider and `DLSS 5 Feed` in the documented order.
+4. Wait about 30 seconds, then check the same view with the camera still and moving.
+5. Record native FPS, displayed FPS with frame generation, and whether you see ghosting, flicker, broken UI, or stutter.
+6. Play briefly in a busy area. If the image or stability is worse, restore the installation.
 
 `Home` is the usual ReShade overlay key. Other hotkeys are preset-dependent and are not guaranteed by this installer. Do not stack methods. See the [full verification checklist](docs/IN-GAME-VERIFICATION.md).
 

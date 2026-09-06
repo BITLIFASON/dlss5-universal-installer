@@ -1,0 +1,76 @@
+{
+  "id": "optiscaler",
+  "version": "0.9.4",
+  "method": "OptiScaler",
+  "archive": "Optiscaler_0.9.4-final.20260718._MM.7z",
+  "installRelativeTo": "primaryExecutableDirectory",
+  "source": "https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.4",
+  "sha256": "575cb4df866116093df75af607e37fd70e10f5163e0f23fd5c804142e80ef0ad",
+  "files": [
+    {
+      "path": "dxgi.dll",
+      "sourcePath": "OptiScaler.dll",
+      "sha256": "fbfb6676b829dad7e020fb830586a16aa0ec6add78016db48ef12e2ae1803231"
+    },
+    {
+      "path": "OptiScaler.ini",
+      "sourcePath": "OptiScaler.ini",
+      "sha256": "6d7ed07e2e9df3d611b6f59047716bcbc0b67834296b8e4414816189b1233aa7"
+    },
+    {
+      "path": "fakenvapi.ini",
+      "sourcePath": "fakenvapi.ini",
+      "sha256": "a4bfa3ec7b4badd93ae5e1ad74a582238082d871f54f38f68e7d9fb6384ce772"
+    },
+    {
+      "path": "fakenvapi.dll",
+      "sourcePath": "fakenvapi.dll",
+      "sha256": "373e73dc06e2d66e90083fde3bc99ef5c1ed0bef98d1f7eda56c8b073269c3f1"
+    },
+    {
+      "path": "dlssg_to_fsr3_amd_is_better.dll",
+      "sourcePath": "dlssg_to_fsr3_amd_is_better.dll",
+      "sha256": "806020c0444f7841a3a9f661295c16fc482e981e0666d0b9624bf6ccd19c4b5e"
+    },
+    {
+      "path": "amd_fidelityfx_dx12.dll",
+      "sourcePath": "amd_fidelityfx_dx12.dll",
+      "sha256": "e2d85aa05a9bd9ed8b38935fdf5199372cca6f74c12015143bb6f945ee1608aa"
+    },
+    {
+      "path": "amd_fidelityfx_framegeneration_dx12.dll",
+      "sourcePath": "amd_fidelityfx_framegeneration_dx12.dll",
+      "sha256": "02297beedd285e822d3a64f314cf00faf378dcec0edc47ff0c4dd71b3a8c2f18"
+    },
+    {
+      "path": "amd_fidelityfx_upscaler_dx12.dll",
+      "sourcePath": "amd_fidelityfx_upscaler_dx12.dll",
+      "sha256": "d0dcccc74a43c44ba435b7a369b456e0970d8a4464e4bd683119b374f2c9fb46"
+    },
+    {
+      "path": "D3D12_Optiscaler\\D3D12Core.dll",
+      "sourcePath": "D3D12_Optiscaler/D3D12Core.dll",
+      "sha256": "07d286c306f8117321422affd9e6388c12d0fb4be1c7fc689d9e899324feeb24"
+    },
+    {
+      "path": "libxell.dll",
+      "sourcePath": "libxell.dll",
+      "sha256": "61aeeab7fdcfb6d1742f86c14c68c663d759607d01a6132645c857291eaebb86"
+    },
+    {
+      "path": "libxess.dll",
+      "sourcePath": "libxess.dll",
+      "sha256": "251659dd84a3e84de67c886a4186e01f3eca49b00641906fe38bb6b807e5d5b7"
+    },
+    {
+      "path": "libxess_dx11.dll",
+      "sourcePath": "libxess_dx11.dll",
+      "sha256": "c7cfe86f0c9d94e4fb3696d3cd5035e2bbb6a8b1b0572f8b7395a4cdfd0c625e"
+    },
+    {
+      "path": "libxess_fg.dll",
+      "sourcePath": "libxess_fg.dll",
+      "sha256": "ec5e0c65e075570c6ede72618bb666d0be0c2e10b2ea9762c0fe8cb8e375ab27"
+    }
+  ]
+}

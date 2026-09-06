@@ -528,6 +528,18 @@ function Get-RelatedInstallManifests($SelectedRecord) {
   }
   return @($related | Sort-Object Timestamp)
 }
+function Get-RestoreCandidates {
+  $latestByGame = @{}
+  foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
+    try {
+      $record = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
+      $root = if ($record.installRoot) { [string]$record.installRoot } else { [string]$record.gamePath }
+      $key = (([string]$record.gamePath) + '|' + $root).ToLowerInvariant()
+      if (-not $latestByGame.ContainsKey($key)) { $latestByGame[$key] = $manifestFile }
+    } catch { }
+  }
+  return @($latestByGame.Values | Sort-Object LastWriteTime -Descending)
+}
 function Get-StackRestoreRecords($RelatedManifests,[bool]$Pristine) {
   $recordsByPath = @{}
   $ordered = if ($Pristine) { @($RelatedManifests | Sort-Object Timestamp) } else { @($RelatedManifests | Sort-Object Timestamp -Descending | Select-Object -First 1) }
@@ -904,10 +916,10 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[strin
   Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true $Provider
 }
 function Run-Restore {
-  $items = Get-InstalledPackageManifest
+  $items = Get-RestoreCandidates
   if ($items.Count -eq 0) { Write-Host (T 'Установок для отката не найдено.' 'No installations to restore.') -ForegroundColor Yellow; return }
-  Write-Host ''; Write-Host (T 'Активные установки для отката (сначала новые):' 'Active installations available for restore (newest first):') -ForegroundColor Cyan
-  Write-Host (T 'После успешного отката запись перемещается в manifests\restored и больше не показывается в этом списке.' 'After a successful restore, the record is moved to manifests\restored and removed from this list.') -ForegroundColor DarkGray
+  Write-Host ''; Write-Host (T 'Последняя активная установка для каждой игры (сначала новые):' 'Latest active installation for each game (newest first):') -ForegroundColor Cyan
+  Write-Host (T 'Старые слои сохраняются для полного отката. После успешного отката выбранная запись перемещается в manifests\restored.' 'Older layers are kept for a full restore. After a successful restore, the selected record moves to manifests\restored.') -ForegroundColor DarkGray
   $seenGames = @{}
   for ($i = 0; $i -lt $items.Count; $i++) {
     $entry = Get-Content -LiteralPath $items[$i].FullName -Raw | ConvertFrom-Json
@@ -918,7 +930,9 @@ function Run-Restore {
     $kind = if ([string]$entry.gamePath -match '(?i)\\local-tests(?:\\|$)') { T '[локальный тест]' '[local test]' } else { '' }
     $gameKey = ([string]$entry.gamePath).ToLowerInvariant()
     $latest = if (-not $seenGames.ContainsKey($gameKey)) { $seenGames[$gameKey] = $true; T '[последняя для игры]' '[latest for game]' } else { '' }
-    Write-Host ("{0}. [{1}] {2} | {3} {4} | {5} {6} {7}" -f ($i + 1),$when,$entry.gamePath,$entry.packageId,$entry.packageVersion,$items[$i].Name,$latest,$kind)
+    $layers = @(Get-RelatedInstallManifests $entry).Count
+    $layerText = (T ('слоёв: {0}' -f $layers) ('layers: {0}' -f $layers))
+    Write-Host ("{0}. [{1}] {2} | {3} {4} | {5} | {6} {7} {8}" -f ($i + 1),$when,$entry.gamePath,$entry.packageId,$entry.packageVersion,$layerText,$items[$i].Name,$latest,$kind)
   }
   $choice = Read-Input 'Выберите номер установки' 'Choose an installation number'
   $index = 0

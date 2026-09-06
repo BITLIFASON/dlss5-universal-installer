@@ -58,4 +58,5 @@
 - Clarified that missing automatic FSR/XeSS detection is an OptiScaler compatibility warning and does not block an intentional test selection.
 - Added an OptiScaler preflight that detects ReShade hooks, offers tracked restore or point-backed cleanup, and prevents the two proxy injection methods from being tested together.
 - Reworked Restore for repeated installs: it now distinguishes selected-layer rollback from full rollback of all related layers, archives restored records, and explains the choice before changing files.
+- Restore now shows one latest candidate per game with a layer count instead of listing repeated installs as separate user-facing entries.
 - Improved Restore selection: active records are sorted by manifest timestamp, show local date and time, label the latest record per game and local test records, and move successfully restored manifests into `manifests/restored`.

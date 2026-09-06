@@ -489,7 +489,23 @@ function Expand-Package([string]$Archive,[string]$Destination) {
   throw (T 'Поддерживаются только ZIP, 7z и RAR.' 'Only ZIP, 7z and RAR are supported.')
 }
 function Get-InstalledPackageManifest {
-  @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+  @(Get-ChildItem -LiteralPath $Dirs.Manifests -Filter 'install-*.json' -File -ErrorAction SilentlyContinue | Sort-Object @{ Expression = {
+    try {
+      $record = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+      if ($record.timestamp) { return [datetime]$record.timestamp }
+    } catch { }
+    return $_.LastWriteTimeUtc
+  }; Descending = $true })
+}
+function Archive-RestoredManifest([System.IO.FileInfo]$ManifestFile) {
+  $archiveDir = Join-Path $Dirs.Manifests 'restored'
+  New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
+  $archivePath = Join-Path $archiveDir $ManifestFile.Name
+  if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
+    $archivePath = Join-Path $archiveDir ('{0}-{1}.json' -f [IO.Path]::GetFileNameWithoutExtension($ManifestFile.Name),(Get-Date -Format 'yyyyMMdd-HHmmss'))
+  }
+  Move-Item -LiteralPath $ManifestFile.FullName -Destination $archivePath -Force
+  return $archivePath
 }
 function Get-PreviousInstallRecord([string]$GamePath,[string]$InstallRoot,[string]$RelativePath) {
   foreach ($manifestFile in @(Get-InstalledPackageManifest)) {
@@ -823,10 +839,19 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[strin
 function Run-Restore {
   $items = Get-InstalledPackageManifest
   if ($items.Count -eq 0) { Write-Host (T 'Установок для отката не найдено.' 'No installations to restore.') -ForegroundColor Yellow; return }
-  Write-Host ''; Write-Host (T 'Доступные установки для отката:' 'Installations available for restore:') -ForegroundColor Cyan
+  Write-Host ''; Write-Host (T 'Активные установки для отката (сначала новые):' 'Active installations available for restore (newest first):') -ForegroundColor Cyan
+  Write-Host (T 'После успешного отката запись перемещается в manifests\restored и больше не показывается в этом списке.' 'After a successful restore, the record is moved to manifests\restored and removed from this list.') -ForegroundColor DarkGray
+  $seenGames = @{}
   for ($i = 0; $i -lt $items.Count; $i++) {
     $entry = Get-Content -LiteralPath $items[$i].FullName -Raw | ConvertFrom-Json
-    Write-Host ("{0}. {1} | {2} {3} | {4}" -f ($i + 1),$entry.gamePath,$entry.packageId,$entry.packageVersion,$items[$i].Name)
+    $when = $items[$i].LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
+    if ($entry.timestamp) {
+      try { $when = ([datetime]$entry.timestamp).ToLocalTime().ToString('yyyy-MM-dd HH:mm:ss') } catch { }
+    }
+    $kind = if ([string]$entry.gamePath -match '(?i)\\local-tests(?:\\|$)') { T '[локальный тест]' '[local test]' } else { '' }
+    $gameKey = ([string]$entry.gamePath).ToLowerInvariant()
+    $latest = if (-not $seenGames.ContainsKey($gameKey)) { $seenGames[$gameKey] = $true; T '[последняя для игры]' '[latest for game]' } else { '' }
+    Write-Host ("{0}. [{1}] {2} | {3} {4} | {5} {6} {7}" -f ($i + 1),$when,$entry.gamePath,$entry.packageId,$entry.packageVersion,$items[$i].Name,$latest,$kind)
   }
   $choice = Read-Input 'Выберите номер установки' 'Choose an installation number'
   $index = 0
@@ -856,7 +881,9 @@ function Run-Restore {
     elseif (-not $entry.existed -and (Test-Path -LiteralPath $destination -PathType Leaf)) { Remove-Item -LiteralPath $destination -Force }
   }
   Write-Log ("RESTORE {0}; source={1}" -f $game,$selected.FullName)
-  Write-Host (T 'Откат завершён.' 'Restore completed.') -ForegroundColor Green
+  $archived = Archive-RestoredManifest $selected
+  Write-Log ("RESTORE_ARCHIVED {0}" -f $archived)
+  Write-Host (T 'Откат завершён. Запись перемещена в архив восстановленных установок.' 'Restore completed. The record was moved to the restored-installations archive.') -ForegroundColor Green
 }
 function Set-Language {
   $value = Read-Input 'Язык (ru/en)' 'Language (ru/en)'

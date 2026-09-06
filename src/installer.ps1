@@ -214,7 +214,7 @@ function Select-Executable($Info) {
 function Show-MethodComparison($Info) {
   Write-Host ''; Write-Host (T 'Сравнение методов:' 'Method comparison:') -ForegroundColor Cyan
   if ($Info.nativeDlssDetected) { Write-Host (T '1. Native/Bridge — обнаружен штатный DLSS; обычно минимальная нагрузка.' '1. Native/Bridge — native DLSS detected; usually lowest overhead.') } else { Write-Host (T '1. Native/Bridge — штатный DLSS не найден, сначала проверить вручную.' '1. Native/Bridge — native DLSS not detected; verify manually first.') -ForegroundColor DarkGray }
-  if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler — найдены пути FSR/XeSS ({0}); возможны конфликты DLL-прокси.' '2. OptiScaler — FSR/XeSS paths detected ({0}); proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler — широкая совместимость; FSR/XeSS в файлах не обнаружены.' '2. OptiScaler — broad compatibility; no FSR/XeSS files detected.') }
+  if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler — найдены пути FSR/XeSS ({0}); возможны конфликты DLL-прокси.' '2. OptiScaler — FSR/XeSS paths detected ({0}); proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler — кандидат для теста; FSR/XeSS автоматически не обнаружены.' '2. OptiScaler — test candidate; FSR/XeSS were not detected automatically.') }
   Write-Host (T '3. ReShade + Feeder — постобработка; требует буфер глубины и векторы движения, обычно снижает FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
 }
 function Confirm-MethodCompatibility($Info,[string]$SelectedMethod) {
@@ -224,7 +224,7 @@ function Confirm-MethodCompatibility($Info,[string]$SelectedMethod) {
     $warning = $true
   }
   if ($SelectedMethod -eq 'OptiScaler' -and @($Info.upscalerFiles).Count -eq 0) {
-    Write-Host (T 'Предупреждение: FSR/XeSS не найдены. OptiScaler может быть несовместим с этой игрой.' 'Warning: no FSR/XeSS files were detected. OptiScaler may be incompatible with this game.') -ForegroundColor Yellow
+    Write-Host (T 'Предупреждение: OptiScaler выбран для теста, но FSR/XeSS автоматически не найдены. Это не запрещает установку; после запуска проверьте изображение и стабильность.' 'Warning: OptiScaler was selected for testing, but no FSR/XeSS files were detected automatically. Installation is still allowed; verify the image and stability after launch.') -ForegroundColor Yellow
     $warning = $true
   }
   if ($warning -and (Read-Input 'Продолжить с этим методом? (y/n)' 'Continue with this method? (y/n)') -notmatch '^(y|yes|д|да)$') { return $false }

@@ -1,4 +1,4 @@
-# ⚡ DLSS5 Universal Installer
+# DLSS 5 Universal Installer
 
 ### A portable, verification-first installer for community DLSS5 integrations on Windows games
 
@@ -21,6 +21,7 @@ Choose a game, inspect its real executable, select an integration method, downlo
 - [✨ Features](#-features)
 - [🎮 Installation methods](#-installation-methods)
 - [📊 Compatibility](#-compatibility)
+- [⚠️ Known limitations](#️-known-limitations)
 - [🧰 Custom packages and versions](#-custom-packages-and-versions)
 - [🔬 How it works](#-how-it-works)
 - [🛠️ Troubleshooting](#️-troubleshooting)
@@ -105,6 +106,15 @@ The installer treats these methods as alternatives. Restore the selected install
 | Online anti-cheat games | Not a target | Not a target | Not a target | Check game rules |
 
 See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits. The exact post-install steps for each method are in the [method guide](docs/METHODS.md).
+
+## ⚠️ Known limitations
+
+- **OptiScaler Bridge + DLSS5 is experimental.** It depends on the game's actual FSR/XeSS path, proxy loading order, renderer, and per-game configuration. It may fail to initialize, show a black or corrupted frame, crash, or produce no visible improvement.
+- **API detection is a hint, not proof.** When a game exposes both DX11 and DX12 indicators, the user must confirm the renderer used at launch. Selecting the wrong path can install a technically valid but unusable combination.
+- **Validation is limited.** The repository has static checks and selected game tests, not a complete compatibility matrix or automated test for every fresh install, reinstall, rollback, renderer, and driver combination.
+- **Pre-existing modifications are outside the restore guarantee.** Unknown DLLs and files left by other mod managers or manual installers may conflict with the selected method and cannot always be reconstructed.
+- **32-bit game support is not confirmed.** The current packages and ReShade/add-on flow primarily target 64-bit games; legacy x86 games may require separate components.
+- **A point backup is not a full game backup.** Keep an independent backup or a clean game copy before experimenting with injection methods.
 
 ## 🧰 Custom packages and versions
 

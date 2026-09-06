@@ -4,6 +4,7 @@ This is the global backlog for the portable installer. Completed work belongs in
 
 ## High priority
 
+- [ ] Improve game-folder selection with configurable roots: keep a list of user-defined library roots (for example `C:\Games`, Steam, Epic, and GOG), let the user choose one default root in **Settings**, and add a selection mode that either asks for a game-folder name relative to that root (with Tab completion where the console supports it) or always opens Explorer. Show the saved roots and recent game profiles before manual browsing, validate the resulting folder before inspection, and keep Explorer as a fallback.
 - [ ] Add 32-bit package variants and architecture-aware ReShade/add-on selection for legacy games; the current Feeder manifest is x64-only.
 - [ ] Implement the no-DLSS synthetic Bridge route as an explicit opt-in: set `synth=1`, require the runtime DLL beside the executable, and show the expected quality/performance warning.
 - [ ] Add a preflight GPU check and warning for DLSS5 Neural Rendering's RTX 40/50 requirement.

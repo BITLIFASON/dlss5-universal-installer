@@ -2,6 +2,8 @@
 
 This matrix describes the current installer scope. A method marked as a candidate still requires a real game test; it is not a compatibility guarantee. Documented failed combinations produce a prominent warning before installation.
 
+The installer can complete file installation while the game still fails at runtime. A successful copy and hash check do not guarantee a usable image, stable frame pacing, or a visible DLSS5 effect.
+
 | Target | Native/Bridge | OptiScaler Bridge + DLSS5 | ReShade + Feeder | Current status |
 |---|---:|---:|---:|---|
 | DirectX 11 x64 | Candidate when the game ships native DLSS | Candidate when the proxy path is supported | Candidate when ReShade can access depth and motion data | Supported scope; verify per game |

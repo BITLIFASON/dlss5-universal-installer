@@ -5,6 +5,9 @@ backups/*
 !backups/.gitkeep
 packages/*
 !packages/README.txt
+!packages/*.manifest.json
+downloads/*
+!downloads/.gitkeep
 staging/*
 manifests/*
 !manifests/.gitkeep
@@ -13,3 +16,10 @@ manifests/*
 *.log
 *.tmp
 Thumbs.db
+
+config/settings.local.json
+config/game-profiles.local.json
+
+# Personal test plans, game paths, and results
+local-tests/*
+!local-tests/.gitkeep

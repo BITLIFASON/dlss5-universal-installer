@@ -2,7 +2,56 @@
 
 ## Unreleased
 
-- Initial portable project structure.
-- Safe check mode and method comparison scaffold.
-- Shared JSON settings with RU/EN selection.
-- Separate package, backup, log, manifest, and documentation directories.
+- Added the initial portable project structure.
+- Added safe inspection mode and method comparison.
+- Added shared JSON settings with RU/EN interface selection.
+- Added separate package, backup, log, manifest, and documentation directories.
+- Implemented read-only game inspection with PE architecture detection, DLSS/proxy hints, and timestamped JSON manifests.
+- Implemented local package inventory with SHA-256 hashes.
+- Implemented verified ZIP installation, per-file hash checks, point backups, restore, and optional elevation.
+- Added Bootstrap preparation from locked sources, including automatic 7zr extraction of multipart DLSS5-AIO archives.
+- Renamed the Bootstrap menu item to Automatic installation.
+- Restore now lets the user choose the game and installation manifest to revert.
+- Documented custom package and alternate-version installation through local manifests.
+- Added universal 0 cancellation at interactive prompts; cancelled operations return to the main menu without installing files.
+- Added menu item 8 for a clean exit and a standard Windows folder picker for game paths.
+- Added Simple and Advanced interface modes for inspection output; the main menu has a dedicated Exit item.
+- Added executable candidate scoring and filters for common Unreal/Unity technical binaries; installation now asks which remaining EXE to target.
+- Moved language, interface mode, automatic downloads, and elevation warnings into a dedicated Settings submenu; the main menu now has a clean Exit item.
+- Changed defaults for a typical English user: English language, simple interface, enabled locked downloads, enabled elevation warning, and no deletion of unknown files.
+- Enabled automatic downloads by default for locked, SHA-256-pinned sources.
+- Updated the fallback configuration and documentation to match the enabled locked-download default.
+- Added ignored `config/settings.local.json` overrides so personal language and interface preferences are not pushed to the repository.
+- Improved Russian UI wording and replaced leftover English menu terms with consistent Russian translations.
+- Reworked the public README around the actual workflow, supported methods, safety model, custom packages, restore flow, and repository layout.
+- Added a component and source index with official upstream links, pinned versions, package manifests, and SHA-256 lockfile references.
+- Fixed README section formatting for the component index link.
+- Added a README documentation index linking to the component, method, manifest, safety, testing, and plan documents in docs/.
+- Completed the README documentation index with descriptions for every Markdown file in docs/.
+- Removed the documentation index from the root README at the repository-level presentation request; docs/ files remain available.
+- Added compatibility and troubleshooting guides covering supported APIs, method selection, recovery, and diagnostics.
+- Added the documentation index to the root README and fixed guide links in docs/README.md.
+- Reworked the root README with a visual quick-start layout, table of contents, Mermaid workflow, compatibility summary, requirements, troubleshooting, and contribution guidance.
+- Cleaned and condensed docs/README.md, removed stale menu references, and separated overview content from detailed guides.
+- Hardened installation code: locked downloads now validate HTTPS and SHA-256 before fetching.
+- Preserved the selected executable across elevation relaunches and improved API hints using PE import strings.
+- Added transactional rollback for partial installs and tracked ReShade changes in the same installation manifest during Bootstrap.
+- Restore now warns before overwriting files whose post-install SHA-256 changed.
+- Added process and proxy-DLL diagnostics, a dry-run installation plan, local per-game profiles, and optional post-install launch verification.
+- Reworked locked sources to keep GitHub repository/tag/asset metadata separate from generated download URLs.
+- Added a streamed download progress bar with temporary-file cleanup on interrupted downloads.
+- Reordered the root README around the user workflow and added an in-game verification checklist.
+- Added FSR/XeSS runtime hints and preserved the first pristine backup across repeated installs of the same game files.
+- Added an explicit compatibility warning before experimental Native/Bridge or OptiScaler choices.
+- Added a global project TODO with implementation, compatibility, UX, and release backlogs.
+- Expanded the TODO with the PE/API scanning, bounded traversal, ReShade detection, active-state, and binary-reporting work identified during the DLSS5-Swapper review.
+- Added an explicit existing-ReShade choice: reinstall, remove the detected hook/configuration and return to the menu, or cancel.
+- Extended unmanaged cleanup to remove known DLSS5 add-on files without touching shader folders, unknown DLLs, or `nvngx_dlss.dll`.
+- Unmanaged cleanup now creates a point snapshot that can restore the removed manual components; it explicitly warns that overwritten game DLL originals cannot be recovered.
+- Unmanaged cleanup now asks whether the installation belongs to this utility and redirects to Restore when a matching manifest exists.
+- Added manifest cleanup: check/package records are removed without another prompt, while install and cleanup records require confirmation.
+- Repaired ReShade shader and texture search paths after installation; documented the DLSS5_Feed activation order and game settings needed for repeatable verification.
+- Made the Feeder profile self-contained: it now downloads pinned LumeniteFX files, sets `DLSS5_MV_PROVIDER=3`, creates the correct `Lumenite_Kernel` → `DLSS5_Feed` preset order, and records the provider files for restore.
+- Enabled geometry and luma validation in the generated Feeder preset to reduce ghosting and softness on static surfaces when motion-vector probes are unstable.
+- Switched the default Feeder profile to conservative per-pixel validation and raised the static-surface contrast threshold after the experimental geometry fit remained soft on moving camera views.
+- Added an explicit LumeniteFX provider choice limited to Kernel or QuantMotion, and updated the pinned Feeder payload to upstream v0.13.1-beta.1 with SHA-256 verification.

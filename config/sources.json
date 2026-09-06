@@ -14,7 +14,7 @@
       "source": "https://github.com/",
       "manual_download": true,
       "sha256": null,
-      "note": "Конкретный upstream release должен быть указан перед установкой; наличие публичного архива не подтверждает безопасность."
+      "note": "A specific upstream release must be recorded before installation; a public archive alone does not prove safety."
     }
   ]
 }

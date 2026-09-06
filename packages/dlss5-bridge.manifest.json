@@ -1,0 +1,14 @@
+{
+  "id": "dlss5-bridge",
+  "version": "1.4.12",
+  "method": "NativeBridge",
+  "installRelativeTo": "primaryExecutableDirectory",
+  "source": "https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12",
+  "files": [
+    {
+      "path": "dlss5-bridge.addon64",
+      "sha256": "4f2acecc1026ae89ac0b92767be66ceea2662ad0ef88710b89c7da7840d548d4"
+    }
+  ],
+  "sourcePackage": "dlss5-bridge"
+}

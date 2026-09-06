@@ -4,7 +4,7 @@ param(
   [string]$GamePath,
   [string]$PackageManifest,
   [string]$SourceId,
-  [ValidateSet('NativeBridge','OptiScaler','Feeder')][string]$Method,
+  [ValidateSet('NativeBridge','OptiBridge','Feeder')][string]$Method,
   [ValidateSet('Kernel','QuantMotion')][string]$LumeniteProvider = 'Kernel',
   [string]$ExecutablePath,
   [string]$Api
@@ -24,6 +24,7 @@ $Dirs = @{
 $Dirs.Values | ForEach-Object { New-Item -ItemType Directory -Force -Path $_ | Out-Null }
 $SettingsPath = Join-Path $Root 'config\settings.json'
 $LocalSettingsPath = Join-Path $Root 'config\settings.local.json'
+$CompatibilityPath = Join-Path $Root 'config\compatibility.json'
 
 function Get-Settings {
   if (-not (Test-Path -LiteralPath $SettingsPath)) {
@@ -48,6 +49,28 @@ function Get-Settings {
   return $settings
 }
 $Settings = Get-Settings
+
+function Get-CompatibilityRecords {
+  if (-not (Test-Path -LiteralPath $CompatibilityPath -PathType Leaf)) { return @() }
+  try {
+    $data = Get-Content -LiteralPath $CompatibilityPath -Raw | ConvertFrom-Json
+    return @($data.records)
+  } catch {
+    Write-Log ("COMPATIBILITY_CONFIG_ERROR {0}" -f $_.Exception.Message)
+    return @()
+  }
+}
+function Find-KnownCompatibilityIssue($Info,[string]$SelectedMethod) {
+  $folderName = Split-Path -Leaf ([string]$Info.gamePath).TrimEnd('\')
+  $exeName = if ($Info.primaryExecutable) { [IO.Path]::GetFileName([string]$Info.primaryExecutable) } else { '' }
+  foreach ($record in @(Get-CompatibilityRecords)) {
+    if ([string]$record.method -ne $SelectedMethod) { continue }
+    $folderMatch = @($record.gameFolderNames | Where-Object { $_ -and $_.ToString().Equals($folderName,[StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+    $exeMatch = @($record.executableNames | Where-Object { $_ -and $_.ToString().Equals($exeName,[StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+    if ($folderMatch -or $exeMatch) { return $record }
+  }
+  return $null
+}
 
 function T([string]$ru,[string]$en) { if ($Settings.language -eq 'en') { return $en }; return $ru }
 function Read-Input([string]$ru,[string]$en) {
@@ -214,17 +237,26 @@ function Select-Executable($Info) {
 function Show-MethodComparison($Info) {
   Write-Host ''; Write-Host (T 'Сравнение методов:' 'Method comparison:') -ForegroundColor Cyan
   if ($Info.nativeDlssDetected) { Write-Host (T '1. Native/Bridge — обнаружен штатный DLSS; обычно минимальная нагрузка.' '1. Native/Bridge — native DLSS detected; usually lowest overhead.') } else { Write-Host (T '1. Native/Bridge — штатный DLSS не найден, сначала проверить вручную.' '1. Native/Bridge — native DLSS not detected; verify manually first.') -ForegroundColor DarkGray }
-  if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler — найдены пути FSR/XeSS ({0}); возможны конфликты DLL-прокси.' '2. OptiScaler — FSR/XeSS paths detected ({0}); proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler — кандидат для теста; FSR/XeSS автоматически не обнаружены.' '2. OptiScaler — test candidate; FSR/XeSS were not detected automatically.') }
+  if (@($Info.upscalerFiles).Count -gt 0) { Write-Host ((T '2. OptiScaler Bridge + DLSS5 — найдены пути FSR/XeSS ({0}); прокси переводит их в DLSS5, возможны конфликты DLL.' '2. OptiScaler Bridge + DLSS5 — FSR/XeSS paths detected ({0}); the proxy routes them into DLSS5, proxy DLL conflicts are possible.') -f @($Info.upscalerFiles).Count) } else { Write-Host (T '2. OptiScaler Bridge + DLSS5 — FSR/XeSS автоматически не обнаружены; установка остаётся экспериментальной.' '2. OptiScaler Bridge + DLSS5 — FSR/XeSS were not detected automatically; installation remains experimental.') }
   Write-Host (T '3. ReShade + Feeder — постобработка; требует буфер глубины и векторы движения, обычно снижает FPS.' '3. ReShade + Feeder — post-processing; needs depth/motion vectors and usually costs more FPS.')
 }
 function Confirm-MethodCompatibility($Info,[string]$SelectedMethod) {
   $warning = $false
+  if ($SelectedMethod -eq 'OptiBridge') {
+    Write-Host (T 'OptiScaler Bridge + DLSS5 требует выбрать в игре FSR или XeSS; обычный OptiScaler отдельно не устанавливается.' 'OptiScaler Bridge + DLSS5 requires FSR or XeSS to be selected in-game; standalone OptiScaler is not installed.') -ForegroundColor Yellow
+    $knownIssue = Find-KnownCompatibilityIssue $Info $SelectedMethod
+    if ($knownIssue) {
+      Write-Host (T ("Предупреждение совместимости: {0}" -f $knownIssue.reason_ru) ("Compatibility warning: {0}" -f $knownIssue.reason_en)) -ForegroundColor Red
+      Write-Host (T ("Тест: {0}; доказательство: {1}" -f $knownIssue.tested,$knownIssue.evidence) ("Tested: {0}; evidence: {1}" -f $knownIssue.tested,$knownIssue.evidence)) -ForegroundColor DarkGray
+      $warning = $true
+    }
+  }
   if ($SelectedMethod -eq 'NativeBridge' -and -not $Info.nativeDlssDetected) {
     Write-Host (T 'Предупреждение: native DLSS не найден. Этот метод может не дать результата.' 'Warning: native DLSS was not detected. This method may not work.') -ForegroundColor Yellow
     $warning = $true
   }
-  if ($SelectedMethod -eq 'OptiScaler' -and @($Info.upscalerFiles).Count -eq 0) {
-    Write-Host (T 'Предупреждение: OptiScaler выбран для теста, но FSR/XeSS автоматически не найдены. Это не запрещает установку; после запуска проверьте изображение и стабильность.' 'Warning: OptiScaler was selected for testing, but no FSR/XeSS files were detected automatically. Installation is still allowed; verify the image and stability after launch.') -ForegroundColor Yellow
+  if ($SelectedMethod -eq 'OptiBridge' -and @($Info.upscalerFiles).Count -eq 0) {
+    Write-Host (T 'Предупреждение: для OptiScaler Bridge + DLSS5 FSR/XeSS автоматически не найдены. Установка остаётся экспериментальной.' 'Warning: OptiScaler Bridge + DLSS5 did not detect FSR/XeSS automatically. Installation remains experimental.') -ForegroundColor Yellow
     $warning = $true
   }
   if ($warning -and (Read-Input 'Продолжить с этим методом? (y/n)' 'Continue with this method? (y/n)') -notmatch '^(y|yes|д|да)$') { return $false }
@@ -358,8 +390,84 @@ function Get-LumeniteProviderConfig([string]$Provider = 'Kernel') {
   if ($Provider -eq 'QuantMotion') { return [ordered]@{ name='QuantMotion'; code=4; technique='lumenite_QuantMotion@lumenite_QuantMotion.fx' } }
   return [ordered]@{ name='Kernel'; code=3; technique='Lumenite_Kernel@lumenite_Kernel.fx' }
 }
-function Prepare-SourcePackage($Manifest,[string]$Provider = 'Kernel') {
-  if ($Manifest.sourcePackage -eq 'dlss5-bridge') { Ensure-LockedDownload 'dlss5-bridge' | Split-Path -Parent; return $Dirs.Downloads }
+function Find-GameNativeDlssRuntime([string]$GamePath) {
+  if (-not $GamePath -or -not (Test-Path -LiteralPath $GamePath -PathType Container)) { return $null }
+  $candidates = @(Get-ChildItem -LiteralPath $GamePath -Recurse -File -Filter 'nvngx_dlss.dll' -ErrorAction SilentlyContinue | ForEach-Object {
+    $full = $_.FullName
+    $score = 0
+    if ($full -match '(?i)\\Engine\\Plugins\\Marketplace\\DLSS\\Binaries\\ThirdParty\\Win64\\nvngx_dlss\.dll$') { $score = 100 }
+    elseif ($full -match '(?i)\\(?:Plugins\\Marketplace\\)?DLSS\\Binaries\\ThirdParty\\Win64\\nvngx_dlss\.dll$') { $score = 90 }
+    elseif ($full -match '(?i)\\(?:Plugins\\)?DLSS[^\\]*\\.*\\nvngx_dlss\.dll$') { $score = 70 }
+    elseif ($full -match '(?i)\\Streamline[^\\]*\\.*\\nvngx_dlss\.dll$') { $score = 60 }
+    if ($score -gt 0) { [pscustomobject]@{ Path=$full; Score=$score } }
+  } | Sort-Object Score -Descending)
+  if ($candidates.Count -gt 0) { return [string]$candidates[0].Path }
+  return $null
+}
+function Prepare-SourcePackage($Manifest,[string]$Provider = 'Kernel',[string]$GamePath = $null) {
+  if ($Manifest.sourcePackage -eq 'dlss5-bridge') {
+    Ensure-LockedDownload 'dlss5-bridge' | Out-Null
+    return $Dirs.Downloads
+  }
+  if ($Manifest.sourcePackage -eq 'dlss5-native-bridge') {
+    $seven = Ensure-LockedDownload '7zr-26.03'
+    $bridge = Ensure-LockedDownload 'dlss5-bridge'
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part2' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part3' | Out-Null
+    $out = Join-Path $Dirs.Staging ('bootstrap-native-bridge-' + $Manifest.version)
+    $aioRoot = Join-Path $out 'DLSS5-AIO'
+    $filesRoot = Join-Path $out 'files'
+    $model = Join-Path $aioRoot '02-DLSS5-Neural-Rendering\nvngx_dlssnr.dll'
+    $neuralAddon = Join-Path $aioRoot '02-DLSS5-Neural-Rendering\renodx-dlss5.addon64'
+    $runtime = Join-Path $aioRoot '01-Official-NVIDIA-DLLs\nvngx_dlss.dll'
+    if (-not (Test-Path -LiteralPath $model -PathType Leaf) -or -not (Test-Path -LiteralPath $neuralAddon -PathType Leaf)) {
+      New-Item -ItemType Directory -Force -Path $out | Out-Null
+      & $seven x (Join-Path $Dirs.Downloads 'DLSS5-AIO-v1.2.5.7z.001') "-o$out" -y | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw 'DLSS5-AIO extraction failed.' }
+    }
+    New-Item -ItemType Directory -Force -Path $filesRoot | Out-Null
+    Copy-Item -LiteralPath $bridge -Destination (Join-Path $filesRoot 'dlss5-bridge.addon64') -Force
+    Copy-Item -LiteralPath $model -Destination (Join-Path $filesRoot 'nvngx_dlssnr.dll') -Force
+    Copy-Item -LiteralPath $neuralAddon -Destination (Join-Path $filesRoot 'renodx-dlss5.addon64') -Force
+    # Prefer the game's own Unreal DLSS runtime. The bridge only searches beside
+    # the add-on and beside the executable, so nested Marketplace binaries are
+    # copied to the executable directory during installation. Keep the pinned
+    # AIO runtime as a fallback for games that do not ship one.
+    $nativeRuntime = Find-GameNativeDlssRuntime $GamePath
+    if ($nativeRuntime) {
+      Copy-Item -LiteralPath $nativeRuntime -Destination (Join-Path $filesRoot 'nvngx_dlss.dll') -Force
+      Set-Content -LiteralPath (Join-Path $filesRoot 'nvngx_dlss.dll.source') -Value $nativeRuntime -Encoding UTF8
+    } else {
+      if (-not (Test-Path -LiteralPath $runtime -PathType Leaf)) { throw 'Neither the game-native nvngx_dlss.dll nor the pinned AIO runtime was found.' }
+      Copy-Item -LiteralPath $runtime -Destination (Join-Path $filesRoot 'nvngx_dlss.dll') -Force
+    }
+    return $out
+  }
+  if ($Manifest.sourcePackage -eq 'opti-dlss5') {
+    $seven = Ensure-LockedDownload '7zr-26.03'
+    $optiArchive = Ensure-LockedDownload 'optiscaler'
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part2' | Out-Null
+    Ensure-LockedDownload 'dlss5-aio-v1.2.5-part3' | Out-Null
+    $out = Join-Path $Dirs.Staging ('bootstrap-opti-dlss5-' + $Manifest.version)
+    $optiRoot = Join-Path $out 'OptiScaler'
+    $aioRoot = Join-Path $out 'DLSS5-AIO'
+    if (-not (Test-Path -LiteralPath (Join-Path $optiRoot 'OptiScaler.dll') -PathType Leaf)) {
+      New-Item -ItemType Directory -Force -Path $optiRoot | Out-Null
+      & $seven x $optiArchive "-o$optiRoot" -y | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw 'OptiScaler extraction failed.' }
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $aioRoot 'DLSS5-AIO\02-DLSS5-Neural-Rendering\renodx-dlss5.addon64') -PathType Leaf)) {
+      New-Item -ItemType Directory -Force -Path $out | Out-Null
+      & $seven x (Join-Path $Dirs.Downloads 'DLSS5-AIO-v1.2.5.7z.001') "-o$out" -y | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw 'DLSS5-AIO extraction failed.' }
+    }
+    $generated = Join-Path $out 'generated\OptiScaler.ini'
+    New-Item -ItemType Directory -Force -Path (Split-Path $generated) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $Root 'config\optiscaler-dlss5.ini') -Destination $generated -Force
+    return $out
+  }
   if ($Manifest.sourcePackage -eq 'dlss5-aio') {
     $seven = Ensure-LockedDownload '7zr-26.03'
     Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null
@@ -432,7 +540,7 @@ function Get-PackageManifest([string]$Path) {
   foreach ($required in @('id','version','method','source','files')) {
     if ($null -eq $manifest.$required) { throw ("Package manifest is missing: {0}" -f $required) }
   }
-  if ($manifest.method -notin @('NativeBridge','OptiScaler','Feeder')) { throw (T 'В манифесте указан неизвестный метод.' 'Unknown method in package manifest.') }
+  if ($manifest.method -notin @('NativeBridge','OptiBridge','Feeder')) { throw (T 'В манифесте указан неизвестный метод.' 'Unknown method in package manifest.') }
   if (-not $manifest.sourcePackage -and -not $manifest.sourcePackages) {
     if ($null -eq $manifest.archive -or $null -eq $manifest.sha256) { throw (T 'В манифесте отсутствуют archive или sha256.' 'Manifest is missing archive or sha256.') }
     $archive = Join-Path $Dirs.Packages ([IO.Path]::GetFileName([string]$manifest.archive))
@@ -454,9 +562,14 @@ function Show-ConflictReport($Info) {
   Write-Host (T 'Обнаружены потенциально конфликтующие DLL:' 'Potentially conflicting DLLs detected:') -ForegroundColor Yellow
   @($Info.proxyFiles) | ForEach-Object { Write-Host (" - {0}" -f $_) }
 }
+function Test-InstallEntryForApi($Entry,[string]$Api) {
+  if (-not $Entry.installWhenApi -or [string]::IsNullOrWhiteSpace($Api)) { return $true }
+  return @($Entry.installWhenApi | ForEach-Object { [string]$_ }) -contains $Api
+}
 function Show-InstallPlan($Manifest,[string]$InstallRoot) {
   Write-Host ''; Write-Host (T 'План установки:' 'Installation plan:') -ForegroundColor Cyan
   foreach ($entry in @($Manifest.files)) {
+    if (-not (Test-InstallEntryForApi $entry $script:InstallApi)) { continue }
     $destination = Join-Path $InstallRoot ([string]$entry.path)
     $action = if (Test-Path -LiteralPath $destination -PathType Leaf) { T 'замена' 'replace' } else { T 'новый файл' 'new file' }
     Write-Host (" - [{0}] {1}" -f $action,$destination)
@@ -471,10 +584,47 @@ function Save-GameProfile($Info,[string]$ExecutablePath,$Manifest,[string]$Api) 
   $profiles | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path -Encoding UTF8
 }
 function Offer-Launch([string]$ExecutablePath) {
-  if ((Read-Input 'Запустить выбранный EXE для проверки? (y/n)' 'Launch the selected executable for verification? (y/n)') -match '^(y|yes|д|да)$') {
-    Start-Process -FilePath $ExecutablePath | Out-Null
-    Write-Log ("LAUNCH {0}" -f $ExecutablePath)
+  try {
+    if ((Read-Input 'Запустить выбранный EXE для проверки? (y/n)' 'Launch the selected executable for verification? (y/n)') -match '^(y|yes|д|да)$') {
+      Start-Process -FilePath $ExecutablePath -WorkingDirectory (Split-Path -Parent $ExecutablePath) -ErrorAction Stop | Out-Null
+      Write-Log ("LAUNCH {0}" -f $ExecutablePath)
+    }
+  } catch [System.OperationCanceledException] {
+    Write-Log ("LAUNCH_CANCELLED {0}" -f $ExecutablePath)
+    Write-Host (T 'Запуск отменён. Установка уже завершена; игру можно запустить вручную.' 'Launch cancelled. Installation is complete; you can start the game manually.') -ForegroundColor Yellow
+  } catch {
+    Write-Log ("LAUNCH_FAILED {0}; error={1}" -f $ExecutablePath,$_.Exception.Message)
+    Write-Host (T ("Не удалось запустить EXE для проверки: {0}. Установка уже завершена." -f $_.Exception.Message) ("The verification launch failed: {0}. Installation is complete." -f $_.Exception.Message)) -ForegroundColor Yellow
   }
+}
+function Convert-ReShadeLoaderForOptiBridge([string]$InstallRoot,[object[]]$Records) {
+  $record = @($Records | Where-Object { [string]$_.path -match '^(dxgi|d3d12)\.dll$' } | Select-Object -First 1)
+  if ($record.Count -eq 0) { throw (T 'После установки ReShade не найден loader DLL для OptiBridge.' 'ReShade loader DLL was not found after OptiBridge setup.') }
+  $source = Join-Path $InstallRoot ([string]$record[0].path)
+  $target = Join-Path $InstallRoot 'ReShade64.dll'
+  if (Test-Path -LiteralPath $target -PathType Leaf) { throw (T 'ReShade64.dll уже существует. Сначала удалите или восстановите старую установку.' 'ReShade64.dll already exists. Restore or remove the previous installation first.') }
+  Move-Item -LiteralPath $source -Destination $target -Force
+  $record[0].path = 'ReShade64.dll'
+  $record[0].installedSha256 = Get-Sha256 $target
+  return @($Records)
+}
+function Select-ReShadeApi($Info) {
+  $hint = [string]$Info.apiHint
+  if ($hint -match 'DX11/DX12') {
+    Write-Host (T 'Обнаружены признаки DX11 и DX12. Выберите API, который игра использует для запуска.' 'Both DX11 and DX12 indicators were found. Select the API the game uses at launch.') -ForegroundColor Yellow
+  } elseif ($hint -match 'DX12') {
+    return 'dxgi'
+  } elseif ($hint -match 'DX11') {
+    return 'd3d11'
+  } else {
+    Write-Host (T 'API игры не удалось определить автоматически. Выберите API для ReShade.' 'The game API could not be detected automatically. Select the ReShade API.') -ForegroundColor Yellow
+  }
+  Write-Host (T '1. DXGI (рекомендуется для DirectX 10/11/12)' '1. DXGI (recommended for DirectX 10/11/12)')
+  Write-Host (T '2. Direct3D 12 (прямой hook)' '2. Direct3D 12 (direct hook)')
+  $choice = Read-Input 'API (1-2)' 'API (1-2)'
+  if ($choice -eq '1') { return 'dxgi' }
+  if ($choice -eq '2') { return 'd3d12' }
+  throw (T 'Некорректный выбор API.' 'Invalid API selection.')
 }
 function Expand-Package([string]$Archive,[string]$Destination) {
   $extension = [IO.Path]::GetExtension($Archive).ToLowerInvariant()
@@ -609,7 +759,7 @@ function Get-FileSnapshot([string]$Root) {
 }
 function Get-ReShadeState([string]$InstallRoot) {
   $hooks = @(Get-ChildItem -LiteralPath $InstallRoot -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -match '^(dxgi|d3d9|d3d10|d3d11|d3d12|opengl32|dinput8)\.dll$' })
+    Where-Object { $_.Name -match '^(dxgi|d3d9|d3d10|d3d11|d3d12|opengl32|dinput8|ReShade64)\.dll$' })
   foreach ($hook in $hooks) {
     try {
       $text = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($hook.FullName))
@@ -686,10 +836,10 @@ function Remove-DetectedReShade([string]$InstallRoot,$State) {
   Write-Log ("UNTRACKED_CLEANUP {0}; manifest={1}" -f $InstallRoot,$manifestPath)
   Write-Host (T 'Компоненты удалены. Точечная копия сохранена; Restore вернёт ручную установку, но не оригинальные файлы игры.' 'Components removed. A point snapshot was saved; Restore will bring back the manual installation, not the original game files.') -ForegroundColor Yellow
 }
-function Prepare-OptiScalerTarget([string]$InstallRoot) {
+function Prepare-OptiBridgeTarget([string]$InstallRoot) {
   $state = Get-ReShadeState $InstallRoot
   if (-not $state.installed) { return $true }
-  Write-Host (T 'Для OptiScaler обнаружен ReShade hook. Эти proxy-инжекторы нельзя безопасно тестировать одновременно.' 'A ReShade hook was detected for OptiScaler. These proxy injectors should not be tested together.') -ForegroundColor Yellow
+  Write-Host (T 'Для OptiScaler Bridge обнаружен существующий ReShade hook. Начните с чистой игры или используйте Restore.' 'An existing ReShade hook was detected for OptiScaler Bridge. Start from a clean game or use Restore.') -ForegroundColor Yellow
   Write-Host (T '1. Удалить обнаруженный ReShade hook и конфигурацию, сохранить точечную копию и продолжить OptiScaler' '1. Remove the detected ReShade hook and configuration, save a point snapshot, and continue with OptiScaler')
   Write-Host (T '2. Отменить установку и вернуться в главное меню' '2. Cancel the installation and return to the main menu')
   $choice = Read-Input 'Выберите действие' 'Choose an action'
@@ -754,10 +904,12 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
     return @()
   }
   $before = Get-FileSnapshot $InstallRoot
-  $arguments = @('--headless','--api',$Api)
-  if ($state.installed) { $arguments += @('--state','update') }
-  $arguments += $Executable
-  $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
+  $argumentText = '--headless --api "{0}" "{1}"' -f $Api,$Executable
+  if ($state.installed) { $argumentText += ' --state update' }
+  $diagBase = Join-Path $Dirs.Logs ('reshade-setup-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
+  $stdoutPath = $diagBase + '.stdout.log'
+  $stderrPath = $diagBase + '.stderr.log'
+  $process = Start-Process -FilePath $Installer -ArgumentList $argumentText -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
   Repair-ReShadeSearchPaths $InstallRoot $Feeder $Provider | Out-Null
   $after = Get-FileSnapshot $InstallRoot
   $records = @()
@@ -777,7 +929,14 @@ function Invoke-TrackedReShade([string]$Installer,[string]$Api,[string]$Executab
   }
   if ($process.ExitCode -ne 0) {
     Restore-Records $records
-    throw ("ReShade setup failed with exit code {0}. Existing ReShade: {1}; add-on support: {2}" -f $process.ExitCode,$state.installed,$state.addonSupport)
+    $diagnostic = @()
+    foreach ($diag in @($stdoutPath,$stderrPath)) {
+      if (Test-Path -LiteralPath $diag -PathType Leaf) {
+        $diagnostic += @(Get-Content -LiteralPath $diag -ErrorAction SilentlyContinue | Select-Object -Last 8)
+      }
+    }
+    $detail = if ($diagnostic.Count -gt 0) { ' Diagnostic: ' + ($diagnostic -join ' | ') } else { '' }
+    throw ("ReShade setup failed with exit code {0} (API: {1}, executable: {2}). Existing ReShade: {3}; add-on support: {4}.{5} Logs: {6}" -f $process.ExitCode,$Api,$Executable,$state.installed,$state.addonSupport,$detail,$diagBase)
   }
   return @($records)
 }
@@ -808,13 +967,14 @@ function Ensure-AdminBootstrap([string]$InstallGamePath,[string]$SelectedMethod,
   Start-Process -FilePath 'powershell.exe' -Verb RunAs -WorkingDirectory $Root -ArgumentList $args | Out-Null
   return $false
 }
-function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false,[string]$Provider = 'Kernel') {
+function Invoke-InstallCore([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false,[string]$Provider = 'Kernel',[string]$Api = $null,[string]$InstallApi = $null) {
   if (-not $ManifestPath) { $ManifestPath = Read-Input 'Укажите путь к manifest пакета (например packages\opti.manifest.json)' 'Enter package manifest path (for example packages\opti.manifest.json)' }
   $game = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
   $info = Get-GameInspection $game
   Show-MethodComparison $info
   if (-not $ExecutablePath) { $ExecutablePath = Select-Executable $info }
   $manifest = Get-PackageManifest (Resolve-Path -LiteralPath $ManifestPath).Path
+  $script:InstallApi = if ($InstallApi) { $InstallApi } else { $Api }
   $installRoot = $game
   if ($manifest.installRelativeTo -eq 'primaryExecutableDirectory') { $installRoot = Split-Path -Parent $ExecutablePath }
   Show-ConflictReport $info
@@ -822,12 +982,11 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   Write-Host (T ("Выбран пакет {0} {1}, метод {2}. Источник: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source) ("Selected package {0} {1}, method {2}. Source: {3}" -f $manifest.id,$manifest.version,$manifest.method,$manifest.source)) -ForegroundColor Yellow
   if (-not $AlreadyConfirmed -and (Read-Input 'Продолжить установку? (y/n)' 'Continue installation? (y/n)') -notmatch '^(y|yes|д|да)$') { return }
   if (-not (Ensure-Admin $installRoot $ManifestPath $ExecutablePath)) { return }
-  if ($manifest.method -eq 'OptiScaler' -and -not (Prepare-OptiScalerTarget $installRoot)) { return }
   $stamp = if ($PreStamp) { $PreStamp } else { Get-Date -Format 'yyyyMMdd-HHmmss' }
   $stage = Join-Path $Dirs.Staging $stamp
   New-Item -ItemType Directory -Force -Path $stage | Out-Null
   $sourceRoot = $stage
-  if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest $Provider }
+  if ($manifest.sourcePackage -or $manifest.sourcePackages) { $sourceRoot = Prepare-SourcePackage $manifest $Provider $game }
   else { Expand-Package $manifest._archivePath $stage }
   $backupRoot = if ($PreBackupRoot) { $PreBackupRoot } else { Join-Path $Dirs.Backups $stamp }
   $records = New-Object 'System.Collections.Generic.List[object]'
@@ -836,12 +995,16 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
   foreach ($pre in $records) { if ($pre.path) { $recordByPath[[string]$pre.path] = $pre } }
   try {
    foreach ($entry in @($manifest.files)) {
+    if (-not (Test-InstallEntryForApi $entry $Api)) { continue }
     $relative = ([string]$entry.path).Replace('/','\')
     $sourceRelative = if ($entry.sourcePath) { ([string]$entry.sourcePath).Replace('/','\') } else { $relative }
     $source = Join-Path $sourceRoot $sourceRelative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw ("Archive is missing manifest file: {0}" -f $relative) }
     $expectedSha = [string]$entry.sha256
     if ($manifest.method -eq 'Feeder' -and $relative -eq 'ReShadePreset.ini' -and $manifest.providerPresetSha256) { $expectedSha = [string]$manifest.providerPresetSha256.$Provider }
+    if ($entry.sourceFromGame -and (Test-Path -LiteralPath ($source + '.source') -PathType Leaf)) {
+      $expectedSha = Get-Sha256 $source
+    }
     if ([string]::IsNullOrWhiteSpace($expectedSha) -or (Get-Sha256 $source) -ne $expectedSha.ToLowerInvariant()) { throw ("Staged file SHA-256 mismatch: {0}" -f $relative) }
     $destination = Join-Path $installRoot $relative
     if ($recordByPath.ContainsKey($relative)) {
@@ -870,20 +1033,47 @@ function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath
     throw
   }
   $records = @($records | ForEach-Object { Normalize-InstallRecord $_ })
+  $script:LastInstallRecords = @($records)
   $install = [ordered]@{ timestamp=(Get-Date).ToUniversalTime().ToString('o'); gamePath=$game; installRoot=$installRoot; packageId=$manifest.id; packageVersion=$manifest.version; method=$manifest.method; provider=if($manifest.method -eq 'Feeder'){$Provider}else{$null}; files=$records }
   $installPath = Save-JsonManifest 'install' $install
+  $script:LastInstallManifestPath = $installPath
   Write-Log ("INSTALL {0}; manifest={1}" -f $game,$installPath)
   if ($manifest.method -eq 'Feeder') { Test-FeederMotionProvider $installRoot | Out-Null }
   Write-Host (T 'Установка завершена. Для отката выберите нужную запись в пункте «Восстановление».' 'Installation completed. Select the required entry in Restore to roll back.') -ForegroundColor Green
   Save-GameProfile $info $ExecutablePath $manifest $info.apiHint
   Offer-Launch $ExecutablePath
 }
+function Run-Install([string]$Path,[string]$ManifestPath,[string]$ExecutablePath,[object[]]$PreRecords,[string]$PreBackupRoot,[string]$PreStamp,[bool]$AlreadyConfirmed = $false,[string]$Provider = 'Kernel',[string]$Api = $null,[string]$InstallApi = $null) {
+  $script:LastInstallRecords = @()
+  $script:LastInstallManifestPath = $null
+  $effectiveStamp = if ($PreStamp) { $PreStamp } else { Get-Date -Format 'yyyyMMdd-HHmmss' }
+  try {
+    Invoke-InstallCore $Path $ManifestPath $ExecutablePath $PreRecords $PreBackupRoot $effectiveStamp $AlreadyConfirmed $Provider $Api $InstallApi
+  } catch [System.OperationCanceledException] {
+    $rollback = @($script:LastInstallRecords) + @($PreRecords)
+    if ($rollback.Count -gt 0) { Restore-Records $rollback }
+    if ($script:LastInstallManifestPath -and (Test-Path -LiteralPath $script:LastInstallManifestPath -PathType Leaf)) {
+      Remove-Item -LiteralPath $script:LastInstallManifestPath -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host (T 'Установка отменена. Изменения этой попытки откатированы.' 'Installation cancelled. Changes from this attempt were rolled back.') -ForegroundColor Yellow
+  } catch {
+    $rollback = @($script:LastInstallRecords) + @($PreRecords)
+    if ($rollback.Count -gt 0) { Restore-Records $rollback }
+    if ($script:LastInstallManifestPath -and (Test-Path -LiteralPath $script:LastInstallManifestPath -PathType Leaf)) {
+      Remove-Item -LiteralPath $script:LastInstallManifestPath -Force -ErrorAction SilentlyContinue
+    }
+    $stage = Join-Path $Dirs.Staging $effectiveStamp
+    if (Test-Path -LiteralPath $stage -PathType Container) { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }
+    try { Write-Log ("INSTALL_ROLLBACK {0}; error={1}" -f $Path,$_.Exception.Message) } catch { }
+    Write-Host (T ("Установка не завершена и изменения этой попытки откатированы: {0}" -f $_.Exception.Message) ("Installation failed and changes from this attempt were rolled back: {0}" -f $_.Exception.Message)) -ForegroundColor Red
+  }
+}
 function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[string]$Provider = 'Kernel') {
   if (-not $Path) { $Path = Read-GamePath }
   $info = Get-GameInspection $Path
   if (-not $SelectedMethod) {
     Show-MethodComparison $info
-    $SelectedMethod = @('NativeBridge','OptiScaler','Feeder')[[int](Read-Input 'Метод (1-3)' 'Method (1-3)') - 1]
+    $SelectedMethod = @('NativeBridge','OptiBridge','Feeder')[[int](Read-Input 'Метод (1-3)' 'Method (1-3)') - 1]
   }
   if (-not (Confirm-MethodCompatibility $info $SelectedMethod)) { return }
   if ($SelectedMethod -eq 'Feeder') {
@@ -893,7 +1083,7 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[strin
     $providerChoice = Read-Input 'Активный режим LumeniteFX (1-2)' 'Active LumeniteFX mode (1-2)'
     if ($providerChoice -eq '2') { $Provider = 'QuantMotion' } elseif ($providerChoice -eq '1') { $Provider = 'Kernel' } else { throw (T 'Некорректный вариант LumeniteFX.' 'Invalid LumeniteFX variant.') }
   }
-  $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiScaler='packages\optiscaler.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
+  $map = @{ NativeBridge='packages\dlss5-bridge.manifest.json'; OptiBridge='packages\opti-dlss5.manifest.json'; Feeder='packages\dlss5-feeder.manifest.json' }
   $manifestPath = Join-Path $Root $map[$SelectedMethod]
   if (-not (Test-Path -LiteralPath $manifestPath)) { throw (T 'Подготовленный манифест метода не найден.' 'Prepared method manifest was not found.') }
   $exe = Select-Executable $info
@@ -902,18 +1092,40 @@ function Run-Bootstrap([string]$Path,[string]$SelectedMethod,[string]$Api,[strin
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $backupRoot = Join-Path $Dirs.Backups $stamp
   $preRecords = @()
-  if ($SelectedMethod -eq 'OptiScaler') {
-    $archive = Ensure-LockedDownload 'optiscaler'
-    Copy-Item -LiteralPath $archive -Destination (Join-Path $Dirs.Packages (Split-Path $archive -Leaf)) -Force
-  } elseif ($SelectedMethod -eq 'NativeBridge') { Ensure-LockedDownload 'dlss5-bridge' | Out-Null }
-  elseif ($SelectedMethod -eq 'Feeder') { Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null }
-  if ($SelectedMethod -in @('NativeBridge','Feeder')) {
-    $reshade = Ensure-LockedDownload 'reshade-full-addons'
-    if (-not $Api) { $Api = if ($info.apiHint -match 'DX12') { 'd3d12' } else { 'd3d11' } }
-    Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
-    $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot ($SelectedMethod -eq 'Feeder') $Provider
+  $installApi = if ([string]$info.apiHint -match 'DX11/DX12') { $null } elseif ([string]$info.apiHint -match '^DX12') { 'dx12' } elseif ([string]$info.apiHint -match '^DX11') { 'd3d11' } elseif ([string]$info.apiHint -match 'Vulkan') { 'vulkan' } else { $null }
+  $script:LastInstallRecords = @()
+  $script:LastInstallManifestPath = $null
+  try {
+    if ($SelectedMethod -eq 'OptiBridge') {
+      $archive = Ensure-LockedDownload 'optiscaler'
+      Copy-Item -LiteralPath $archive -Destination (Join-Path $Dirs.Packages (Split-Path $archive -Leaf)) -Force
+    } elseif ($SelectedMethod -eq 'NativeBridge') { Ensure-LockedDownload 'dlss5-bridge' | Out-Null }
+    elseif ($SelectedMethod -eq 'Feeder') { Ensure-LockedDownload 'dlss5-aio-v1.2.5-part1' | Out-Null }
+    if ($SelectedMethod -in @('NativeBridge','OptiBridge','Feeder')) {
+      if ($SelectedMethod -eq 'OptiBridge' -and -not (Prepare-OptiBridgeTarget (Split-Path -Parent $exe))) { return }
+      $reshade = Ensure-LockedDownload 'reshade-full-addons'
+      if (-not $Api) { $Api = Select-ReShadeApi $info }
+      Write-Host (T 'Автоматическая установка ReShade...' 'Installing ReShade automatically...')
+      $preRecords = Invoke-TrackedReShade $reshade $Api $exe (Split-Path -Parent $exe) $backupRoot ($SelectedMethod -eq 'Feeder') $Provider
+      if ($SelectedMethod -eq 'OptiBridge') { $preRecords = Convert-ReShadeLoaderForOptiBridge (Split-Path -Parent $exe) $preRecords }
+    }
+    Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true $Provider $Api $installApi
+  } catch [System.OperationCanceledException] {
+    if (@($preRecords).Count -gt 0) { Restore-Records $preRecords }
+    Write-Host (T 'Установка отменена. Возврат в главное меню.' 'Installation cancelled. Returning to the main menu.') -ForegroundColor Yellow
+    return
+  } catch {
+    $rollback = @($script:LastInstallRecords) + @($preRecords)
+    if ($rollback.Count -gt 0) { Restore-Records $rollback }
+    if ($script:LastInstallManifestPath -and (Test-Path -LiteralPath $script:LastInstallManifestPath -PathType Leaf)) {
+      Remove-Item -LiteralPath $script:LastInstallManifestPath -Force -ErrorAction SilentlyContinue
+    }
+    $stage = Join-Path $Dirs.Staging $stamp
+    if (Test-Path -LiteralPath $stage -PathType Container) { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }
+    try { Write-Log ("INSTALL_ROLLBACK {0}; error={1}" -f $Path,$_.Exception.Message) } catch { }
+    Write-Host (T ("Установка не завершена и изменения этой попытки откатированы: {0}" -f $_.Exception.Message) ("Installation failed and changes from this attempt were rolled back: {0}" -f $_.Exception.Message)) -ForegroundColor Red
+    return
   }
-  Run-Install $Path $manifestPath $exe $preRecords $backupRoot $stamp $true $Provider
 }
 function Run-Restore {
   $items = Get-RestoreCandidates

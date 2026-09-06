@@ -4,6 +4,11 @@ This is the global backlog for the portable installer. Completed work belongs in
 
 ## High priority
 
+- [ ] Add 32-bit package variants and architecture-aware ReShade/add-on selection for legacy games; the current Feeder manifest is x64-only.
+- [ ] Implement the no-DLSS synthetic Bridge route as an explicit opt-in: set `synth=1`, require the runtime DLL beside the executable, and show the expected quality/performance warning.
+- [ ] Add a preflight GPU check and warning for DLSS5 Neural Rendering's RTX 40/50 requirement.
+- [ ] Add per-game method profiles with clear warnings for failed combinations and tested recovery paths.
+
 - [ ] Replace raw EXE string matching with a layered PE scan: normal imports, delay-load imports, API entry-point markers, and matching engine DLLs.
 - [ ] Limit game inspection to relevant executable/DLL files, cap scan depth, and skip asset, cache, backup, redist, and tool directories.
 - [ ] Detect ReShade hooks by file version/signature and report whether add-on support is present before installing another runtime.
@@ -55,3 +60,7 @@ This is the global backlog for the portable installer. Completed work belongs in
 - Automatic installation into online games with anti-cheat.
 - Silent removal of files that are not recorded in an installation manifest.
 - GUI work before the command-line workflow is stable and repeatably tested.
+# Method routing
+
+- [ ] Add an explicit opt-in for the no-DLSS synthetic Bridge route (`synth=1`) with a clear quality and compatibility warning.
+- [ ] Add a read-only post-install log check that confirms the expected add-on was loaded and warns when the selected game exposes a different rendering path.

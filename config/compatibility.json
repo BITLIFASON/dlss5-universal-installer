@@ -1,0 +1,18 @@
+﻿{
+  "_comments": {
+    "records": "Documented local test results. A blocked method requires an explicit local override before installation.",
+    "match": "Match by game folder name or executable name; keep entries narrow and evidence based."
+  },
+  "records": [
+    {
+      "gameFolderNames": ["Assetto Corsa Rally"],
+      "executableNames": ["acr.exe"],
+      "method": "OptiBridge",
+      "status": "warning",
+      "reason_ru": "\u0412 \u0442\u0435\u0441\u0442\u0435 OptiScaler Bridge + DLSS5 \u0438\u0433\u0440\u0430 \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u043b\u0430 \u0447\u0451\u0440\u043d\u044b\u0439 \u043a\u0430\u0434\u0440 \u043f\u0440\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u043e\u043c HUD. DLSS/FSR \u0431\u0435\u0437 \u043c\u043e\u0441\u0442\u0430 \u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0438.",
+      "reason_en": "In testing, OptiScaler Bridge + DLSS5 produced a black rendered frame while the HUD remained visible. The game's DLSS/FSR paths worked without the bridge.",
+      "tested": "2026-09-06",
+      "evidence": "Assetto Corsa Rally 0.9; install-20260906-145027.json"
+    }
+  ]
+}

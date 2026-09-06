@@ -21,6 +21,8 @@ Run `Check` again and inspect the executable candidates. During installation, ch
 
 The utility restores only files recorded by its installation manifest. It does not delete unrelated files.
 
+The installer cannot validate the game's final backbuffer or image output. A black screen after a completed file installation is a runtime compatibility problem: close the game, restore the selected installation, and report the renderer, executable, method, and log if the issue is reproducible.
+
 ## The image is unchanged
 
 - Confirm that the selected method matches the game's native upscaler path.
@@ -37,6 +39,8 @@ Common causes are a missing package archive, a manifest mismatch, or a SHA-256 m
 The game folder may not be writable by the current process. The utility shows a warning before elevation. Accept it only when the selected game path and package are correct.
 
 ## ReShade installation fails
+
+If the ReShade setup exits with code `1`, check the API selected by the wizard. When the executable does not expose a reliable API hint, the wizard offers **DXGI** (recommended for DirectX 10/11/12) and a direct D3D12 hook. Use DXGI first for the Bridge method; the failed attempt is rolled back and does not count as a completed installation.
 
 If the game already has ReShade or a proxy DLL, the wizard offers three choices: reinstall over it, remove the detected hook, configuration, and known DLSS5 add-on files, or cancel. Before removal it asks whether the installation came from this utility. If a matching manifest exists, removal is refused and you are directed to **Restore**. If the manifest is missing, the tool warns that old backup folders may be incomplete. Before removal, it creates a point snapshot and adds it to **Restore**. That snapshot can restore the manual components, but it cannot recover original game files that were overwritten before the snapshot. The `reshade-shaders` folder, unknown DLLs, and `nvngx_dlss.dll` are left untouched. Confirm that the selected executable is the actual game process and that the pinned ReShade Add-on installer was downloaded successfully.
 
@@ -63,9 +67,9 @@ A successful ReShade injection alone is not enough. Feeder also needs one motion
 
 The installer offers only two LumeniteFX providers: **Kernel** (`DLSS5_MV_PROVIDER=3`) and **QuantMotion** (`DLSS5_MV_PROVIDER=4`). Enable the selected Lumenite technique above `DLSS5_Feed`; do not enable both at once.
 
-## OptiScaler reports a ReShade conflict
+## OptiScaler Bridge + DLSS5 reports a proxy conflict
 
-OptiScaler and ReShade both use proxy injection paths. Before an OptiScaler install, the wizard now offers to remove a detected ReShade hook and its known configuration files. It creates a point snapshot first and leaves the shader folder and unknown DLLs untouched. If the ReShade files belong to a tracked installation, restore that installation instead of deleting the hook. If the files are untracked, the wizard warns that original game DLLs overwritten before the snapshot cannot be recovered.
+OptiScaler Bridge + DLSS5 uses a proxy alongside ReShade and the DLSS5 add-on. Start with a clean game directory and restore any previous installation before trying the bridge. The game must expose an FSR or XeSS input; selecting DLSS as the game input bypasses the bridge route. If the files are untracked, the wizard warns that original game DLLs overwritten before the snapshot cannot be recovered.
 
 ## Grey walls look soft or smear while the camera moves
 

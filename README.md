@@ -37,9 +37,11 @@ Choose a game, inspect its real executable, select an integration method, downlo
 3. Select **Automatic installation**.
 4. Enter the game path, or type `1` to open the Windows folder picker.
 5. Review the executable candidates and choose the real game executable. Avoid launchers, editors, crash reporters, and dedicated servers.
-6. Select Native/Bridge, OptiScaler, or ReShade + Feeder.
+6. Select Native/Bridge, OptiScaler Bridge + DLSS5, or ReShade + Feeder.
 7. Review the conflict report and installation plan, then confirm.
 8. Start the game and follow [In-game verification](#-in-game-verification).
+
+The installer marks a setup complete after the declared files pass hash checks and are recorded. It cannot guarantee a usable image for every game or renderer; if the game shows a black screen or crashes, close it and use **Restore a selected installation**.
 
 The tracked defaults are English, Simple interface, locked automatic downloads enabled, elevation warnings enabled, and unknown-file deletion disabled. Personal changes are saved to ignored `config/settings.local.json`.
 
@@ -69,7 +71,7 @@ Choose **Restore a selected installation** to see the latest active record for e
 ## ✨ Features
 
 - One-click Bootstrap flow for pinned upstream releases;
-- Native/Bridge, OptiScaler, and ReShade + Feeder methods;
+- Native/Bridge, OptiScaler Bridge + DLSS5, and ReShade + Feeder methods;
 - executable candidate scoring with Unreal/Unity technical-process filtering;
 - Windows Explorer folder picker and manual path input;
 - SHA-256 verification for downloads and staged files;
@@ -87,14 +89,14 @@ Choose **Restore a selected installation** to see the latest active record for e
 | Method | Best fit | Trade-off |
 |---|---|---|
 | **Native/Bridge** | Games that already ship with native DLSS | Usually the lowest overhead; requires a compatible native path |
-| **OptiScaler** | Games whose upscaler path can be redirected | Broad compatibility; proxy DLL conflicts are possible |
-| **ReShade + Feeder** | Games without native DLSS when depth/motion data is available | Broadest route; usually costs more FPS and may need per-game tuning |
+| **OptiScaler Bridge + DLSS5** | Games with FSR/XeSS input when a proxy bridge is appropriate | Routes FSR/XeSS into DLSS5; proxy DLL conflicts are possible |
+| **ReShade + Feeder** | DLSS5 neural rendering when depth/motion data is available | Complete DLSS5 payload; usually costs more FPS and may need per-game tuning |
 
 The installer treats these methods as alternatives. Restore the selected installation before switching methods.
 
 ## 📊 Compatibility
 
-| Target | Native/Bridge | OptiScaler | ReShade + Feeder | Status |
+| Target | Native/Bridge | OptiScaler Bridge + DLSS5 | ReShade + Feeder | Status |
 |---|---:|---:|---:|---|
 | DirectX 11 x64 | Candidate | Candidate | Candidate | Verify per game |
 | DirectX 12 x64 | Candidate | Candidate | Candidate | Verify per game |
@@ -102,7 +104,7 @@ The installer treats these methods as alternatives. Restore the selected install
 | Vulkan / OpenGL | Not implemented | Not implemented | Not implemented | Out of scope |
 | Online anti-cheat games | Not a target | Not a target | Not a target | Check game rules |
 
-See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits.
+See the full [compatibility matrix](docs/COMPATIBILITY.md) for method guidance and detection limits. The exact post-install steps for each method are in the [method guide](docs/METHODS.md).
 
 ## 🧰 Custom packages and versions
 
@@ -155,6 +157,7 @@ See the full [Troubleshooting guide](docs/TROUBLESHOOTING.md).
 | Document | Purpose |
 |---|---|
 | [Portable tool guide](docs/README.md) | Actions, profiles, settings, and operating flow |
+| [Method guide](docs/METHODS.md) | What to select in-game and configure after each installation method |
 | [In-game verification](docs/IN-GAME-VERIFICATION.md) | Repeatable visual, FPS, stability, and rollback checks |
 | [Components and sources](docs/COMPONENTS.md) | Pinned versions, official upstream links, and file groups |
 | [Compatibility matrix](docs/COMPATIBILITY.md) | Supported APIs, methods, and current boundaries |

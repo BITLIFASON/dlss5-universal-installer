@@ -32,10 +32,11 @@ src\installer.ps1 -Action Restore
 ## Profiles
 
 - **Native/Bridge** — for games with native DLSS;
-- **OptiScaler** — for a supported upscaler proxy path;
+- **OptiScaler Bridge + DLSS5** — for games with an FSR/XeSS input that should be routed into DLSS5;
 - **ReShade + Feeder** — for games without native DLSS when depth and motion data are available.
 
 The methods are alternatives. Restore the selected installation before switching methods.
+After installation, follow the method-specific steps in [Methods](METHODS.md) and then run the repeatable [in-game verification checklist](IN-GAME-VERIFICATION.md).
 
 ## Custom packages
 
@@ -50,6 +51,7 @@ Runtime downloads, staging files, backups, generated manifests, logs, and person
 ## Public guides
 
 - [In-game verification](IN-GAME-VERIFICATION.md) — repeatable visual, FPS, stability, and rollback checks;
+- [Methods](METHODS.md) — what to select in the game and what to configure after each installation method;
 - [Components and sources](COMPONENTS.md) — pinned versions, official upstream releases, and file groups;
 - [Compatibility matrix](COMPATIBILITY.md) — supported APIs, methods, and current boundaries;
 - [Troubleshooting](TROUBLESHOOTING.md) — recovery steps and diagnostic collection;

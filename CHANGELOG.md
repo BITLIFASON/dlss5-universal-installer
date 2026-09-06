@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- NativeBridge now detects the Unreal Engine Marketplace DLSS runtime inside the selected game and stages that exact `nvngx_dlss.dll` beside the executable, falling back to the pinned AIO runtime only when the game does not provide one.
+- Native DX12 now keeps the game's own DLSS runtime and installs RenoDX without an unnecessary Bridge DLL; DX11/Vulkan uses the Bridge route when selected.
+- OptiBridge now follows OptiScaler's ReShade sideload layout by moving the tracked ReShade loader to `ReShade64.dll` and enabling `LoadReshade=true`.
+- Installation failures after file changes now restore the current attempt, remove its incomplete manifest, clean its staging directory, and return to the menu.
+- Fixed NativeBridge source staging: a downloaded `.addon64` was returned together with its parent path, producing a duplicated path and aborting installation before the package copy.
+- Made the optional post-install game launch non-fatal: cancellation or a Windows launch error is logged as a warning without turning a completed installation into a menu error.
+- Fixed NativeBridge packaging to install the required `nvngx_dlssnr.dll` DLSS5 model alongside the bridge add-on; the add-on previously loaded and immediately disabled itself when that runtime was absent.
+- Added the pinned `nvngx_dlss.dll` implementation to NativeBridge after the bridge log showed that the model alone was insufficient.
+- Restored Assetto Corsa Rally from the failed OptiScaler Bridge + DLSS5 installation using its point manifest; the normal game DLSS/FSR files remain in place.
+- Added a compatibility warning registry. Known black-frame results are shown before installation and require an explicit confirmation instead of being blocked automatically.
 - Added the initial portable project structure.
 - Added safe inspection mode and method comparison.
 - Added shared JSON settings with RU/EN interface selection.
@@ -62,3 +72,10 @@
 - Documented the clean-game prerequisite and the risks of installing over third-party mod managers, manual DLL swaps, ReShade, OptiScaler, or other injectors.
 - Made game-setting activation the first in-game verification step and clarified the ReShade technique activation order.
 - Improved Restore selection: active records are sorted by manifest timestamp, show local date and time, label the latest record per game and local test records, and move successfully restored manifests into `manifests/restored`.
+- Added method-specific in-game instructions for Native/Bridge, OptiScaler, and ReShade + Feeder, including the Assetto Corsa Rally FSR 3.1 first-test path and the ReShade activation order.
+- Replaced the standalone OptiScaler method with the combined OptiScaler Bridge + DLSS5 package; it now stages the OptiScaler proxy together with the DLSS5 neural-rendering runtime and requires an in-game FSR/XeSS input.
+- ReShade bootstrap now offers a DXGI hook for DirectX 10/11/12 games when API detection is uncertain; this is the preferred hook for the Bridge route.
+- Disabled OptiScaler FFX/FSR input hooks by default in the Bridge profile so Assetto Corsa Rally can use the selected XeSS input without the competing FSR path.
+- Forced XeSS input detection on in the Bridge profile while keeping FFX/FSR input hooks disabled for the Rally test path.
+- ReShade bootstrap now asks for the API when executable inspection cannot distinguish DX11 from DX12; failed setup reports the selected API and rolls back files created during the failed attempt.
+- Fixed NativeBridge packaging to include the required `renodx-dlss5.addon64`; DX12 native-DLSS games use the RenoDX panel while the Bridge panel can remain idle.

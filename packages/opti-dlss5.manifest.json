@@ -1,0 +1,94 @@
+{
+  "id": "opti-dlss5-bridge",
+  "version": "0.9.4+dlss5-1.2.5",
+  "method": "OptiBridge",
+  "installRelativeTo": "primaryExecutableDirectory",
+  "sourcePackage": "opti-dlss5",
+  "sourcePackages": [
+    "optiscaler",
+    "dlss5-aio"
+  ],
+  "source": "https://github.com/optiscaler/OptiScaler + https://github.com/ShugokiFable/dlss5-aio",
+  "files": [
+    {
+      "path": "version.dll",
+      "sourcePath": "OptiScaler\\OptiScaler.dll",
+      "sha256": "fbfb6676b829dad7e020fb830586a16aa0ec6add78016db48ef12e2ae1803231"
+    },
+    {
+      "path": "OptiScaler.ini",
+      "sourcePath": "generated\\OptiScaler.ini",
+      "sha256": "d43a60b417327f5e64a57fbcf45624220e585d294254653a80e56f64aa9bb58b"
+    },
+    {
+      "path": "fakenvapi.ini",
+      "sourcePath": "OptiScaler\\fakenvapi.ini",
+      "sha256": "a4bfa3ec7b4badd93ae5e1ad74a582238082d871f54f38f68e7d9fb6384ce772"
+    },
+    {
+      "path": "fakenvapi.dll",
+      "sourcePath": "OptiScaler\\fakenvapi.dll",
+      "sha256": "373e73dc06e2d66e90083fde3bc99ef5c1ed0bef98d1f7eda56c8b073269c3f1"
+    },
+    {
+      "path": "dlssg_to_fsr3_amd_is_better.dll",
+      "sourcePath": "OptiScaler\\dlssg_to_fsr3_amd_is_better.dll",
+      "sha256": "806020c0444f7841a3a9f661295c16fc482e981e0666d0b9624bf6ccd19c4b5e"
+    },
+    {
+      "path": "amd_fidelityfx_dx12.dll",
+      "sourcePath": "OptiScaler\\amd_fidelityfx_dx12.dll",
+      "sha256": "e2d85aa05a9bd9ed8b38935fdf5199372cca6f74c12015143bb6f945ee1608aa"
+    },
+    {
+      "path": "amd_fidelityfx_framegeneration_dx12.dll",
+      "sourcePath": "OptiScaler\\amd_fidelityfx_framegeneration_dx12.dll",
+      "sha256": "02297beedd285e822d3a64f314cf00faf378dcec0edc47ff0c4dd71b3a8c2f18"
+    },
+    {
+      "path": "amd_fidelityfx_upscaler_dx12.dll",
+      "sourcePath": "OptiScaler\\amd_fidelityfx_upscaler_dx12.dll",
+      "sha256": "d0dcccc74a43c44ba435b7a369b456e0970d8a4464e4bd683119b374f2c9fb46"
+    },
+    {
+      "path": "D3D12_Optiscaler\\D3D12Core.dll",
+      "sourcePath": "OptiScaler\\D3D12_Optiscaler\\D3D12Core.dll",
+      "sha256": "07d286c306f8117321422affd9e6388c12d0fb4be1c7fc689d9e899324feeb24"
+    },
+    {
+      "path": "libxell.dll",
+      "sourcePath": "OptiScaler\\libxell.dll",
+      "sha256": "61aeeab7fdcfb6d1742f86c14c68c663d759607d01a6132645c857291eaebb86"
+    },
+    {
+      "path": "libxess.dll",
+      "sourcePath": "OptiScaler\\libxess.dll",
+      "sha256": "251659dd84a3e84de67c886a4186e01f3eca49b00641906fe38bb6b807e5d5b7"
+    },
+    {
+      "path": "libxess_dx11.dll",
+      "sourcePath": "OptiScaler\\libxess_dx11.dll",
+      "sha256": "c7cfe86f0c9d94e4fb3696d3cd5035e2bbb6a8b1b0572f8b7395a4cdfd0c625e"
+    },
+    {
+      "path": "libxess_fg.dll",
+      "sourcePath": "OptiScaler\\libxess_fg.dll",
+      "sha256": "ec5e0c65e075570c6ede72618bb666d0be0c2e10b2ea9762c0fe8cb8e375ab27"
+    },
+    {
+      "path": "nvngx_dlss.dll",
+      "sourcePath": "DLSS5-AIO\\01-Official-NVIDIA-DLLs\\nvngx_dlss.dll",
+      "sha256": "d202b024cf5a809d4f6cb57b698ca61cdf7e7f664915a3794942042066d7cf72"
+    },
+    {
+      "path": "nvngx_dlssnr.dll",
+      "sourcePath": "DLSS5-AIO\\02-DLSS5-Neural-Rendering\\nvngx_dlssnr.dll",
+      "sha256": "dcc0dc2414aedec4a8e084647070383be068554042587180c20c784d4772d36f"
+    },
+    {
+      "path": "renodx-dlss5.addon64",
+      "sourcePath": "DLSS5-AIO\\02-DLSS5-Neural-Rendering\\renodx-dlss5.addon64",
+      "sha256": "87aef9ddd937c7241e6bf8d8efea0045d63559135e254c60dab316db3d3a4aee"
+    }
+  ]
+}

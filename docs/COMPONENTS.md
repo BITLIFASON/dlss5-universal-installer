@@ -5,8 +5,8 @@ This index lists the components used by the installer and the exact upstream rel
 | Component | Installed or prepared files | Version | Official source |
 |---|---|---:|---|
 | ReShade Add-on Support | ReShade runtime installed for the selected game executable | 6.8.0 | [ReShade](https://reshade.me/) · [pinned asset](https://reshade.me/downloads/ReShade_Setup_6.8.0_Addon.exe) |
-| DLSS5 Bridge | `dlss5-bridge.addon64` | 1.4.12 | [NIGos/dlss5-bridge release](https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12) |
-| OptiScaler | `dxgi.dll`, `OptiScaler.ini`, proxy/runtime DLLs declared in the manifest | 0.9.4 | [OptiScaler release](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.4) |
+| DLSS5 Bridge / RenoDX | `dlss5-bridge.addon64`, `renodx-dlss5.addon64`, game-native or fallback `nvngx_dlss.dll`, `nvngx_dlssnr.dll` | 1.4.12 + DLSS5-AIO 1.2.5 | [NIGos/dlss5-bridge release](https://github.com/NIGos/dlss5-bridge/releases/tag/v1.4.12) · [DLSS5-AIO release](https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5) |
+| OptiScaler Bridge + DLSS5 | `version.dll`, OptiScaler proxy/runtime DLLs, `renodx-dlss5.addon64`, `nvngx_dlssnr.dll`, and the DLSS runtime | OptiScaler 0.9.4 + DLSS5-AIO 1.2.5 | [OptiScaler v0.9.4](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.4) · [DLSS5-AIO v1.2.5](https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5) |
 | DLSS5 Feeder | `dlss5-feed.addon64`, `DLSS5_Feed.fx`, `renodx-dlss5.addon64`, `nvngx_dlssnr.dll`, `nvngx_dlss.dll`, and the declared ReShade shader assets | 1.2.5 | [ShugokiFable/dlss5-aio release](https://github.com/ShugokiFable/dlss5-aio/releases/tag/v1.2.5) |
 | Feeder motion provider | `lumenite_Kernel.fx`, required includes, blue-noise texture | `mainline@76fa3e4d` | [umar-afzaal/LumeniteFX](https://github.com/umar-afzaal/LumeniteFX/tree/76fa3e4d601c97e9bc63f119c01405b7b9938885) |
 | 7-Zip command-line extractor | `7zr.exe` used to prepare multipart AIO archives | 26.03 | [7-Zip upstream release](https://github.com/ip7z/7zip/releases/tag/26.03) |
@@ -16,7 +16,7 @@ This index lists the components used by the installer and the exact upstream rel
 The installable file lists and per-file hashes are kept in the repository:
 
 - [`packages/dlss5-bridge.manifest.json`](../packages/dlss5-bridge.manifest.json) — Native/Bridge;
-- [`packages/optiscaler.manifest.json`](../packages/optiscaler.manifest.json) — OptiScaler;
+- [`packages/opti-dlss5.manifest.json`](../packages/opti-dlss5.manifest.json) — OptiScaler Bridge + DLSS5;
 - [`packages/dlss5-feeder.manifest.json`](../packages/dlss5-feeder.manifest.json) — ReShade + Feeder.
 
 The locked download metadata, versions, licenses, and archive SHA-256 values are recorded in [`config/sources.lock.json`](../config/sources.lock.json). GitHub assets use an exact repository, tag, and filename; the installer derives the release download URL from those fields. A matching hash confirms that the downloaded bytes equal the locked asset; it is not a safety certification.
